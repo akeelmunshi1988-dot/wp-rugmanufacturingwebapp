@@ -22,9 +22,12 @@ cd tests/quote-engine-parity
 1. `run_reference.py` drives the **unmodified** original engine (via the
    backend venv) over `cases.json` → `reference_out.json`. A tiny in-memory
    fake `db` session feeds it plain fixture objects — no database needed.
-2. `run_php.php` runs inside the `wordpress` container: seeds the `wp_drc_*`
-   config tables + `drc_settings` from the same `cases.json`, runs
-   `DRC_Quote_Engine` over the same matrix → `php_out.json`.
+2. `run_php.php` runs inside the `wordpress` container: **TRUNCATEs and
+   re-seeds** `wp_drc_materials`, `wp_drc_pricing_rules`, `wp_drc_moq_rules`,
+   `wp_drc_production_timelines` and overwrites the pricing keys in
+   `drc_settings` from `cases.json`, then runs `DRC_Quote_Engine` over the
+   matrix → `php_out.json`. Run it only against a dev/staging database — it
+   replaces those four config tables with fixtures.
 3. `compare.py` diffs the two, field by field, with a 0.01 (one-paisa)
    float tolerance for PHP's round-half-away-from-zero vs Python's
    round-half-to-even. Exit 0 = parity.
