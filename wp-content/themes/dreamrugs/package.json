@@ -1,0 +1,11 @@
+{
+  "name": "dreamrugs-theme",
+  "private": true,
+  "scripts": {
+    "build": "tailwindcss -i ./src/input.css -o ./assets/style.build.css --minify",
+    "watch": "tailwindcss -i ./src/input.css -o ./assets/style.build.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}

@@ -1,0 +1,20 @@
+.drc-tabs { display: flex; gap: 4px; margin: 16px 0; border-bottom: 1px solid #c3c4c7; }
+.drc-tab { padding: 8px 14px; cursor: pointer; border: 1px solid transparent; border-bottom: none; background: none; font-size: 13px; }
+.drc-tab.active { background: #fff; border-color: #c3c4c7; border-radius: 3px 3px 0 0; font-weight: 600; margin-bottom: -1px; }
+.drc-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 16px 0; }
+.drc-card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 14px 16px; }
+.drc-card .drc-card-label { color: #646970; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+.drc-card .drc-card-value { font-size: 22px; font-weight: 600; margin-top: 4px; }
+.drc-quote-row.expanded { background: #f6f7f7; }
+.drc-quote-detail { padding: 12px 16px; background: #f6f7f7; border-top: 1px solid #e2e4e7; }
+.drc-field-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.drc-field-row label { display: flex; flex-direction: column; font-size: 12px; color: #1d2327; gap: 3px; }
+.drc-field-row input, .drc-field-row select, .drc-field-row textarea { min-width: 160px; }
+.drc-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+.drc-badge-draft { background: #f0f0f1; color: #646970; }
+.drc-badge-sent { background: #e5f5fa; color: #0a5a86; }
+.drc-badge-accepted { background: #edfaef; color: #1a7a34; }
+.drc-badge-rejected { background: #fbeaea; color: #a02222; }
+.drc-error { color: #a02222; margin: 8px 0; }
+.drc-msg { color: #1a7a34; margin: 8px 0; }
+.drc-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }

@@ -1,0 +1,23 @@
+.env
+migration/.env
+node_modules/
+wp-content/uploads/
+wp-content/themes/dreamrugs/node_modules/
+*.log
+.DS_Store
+__pycache__/
+*.pyc
+room-preview-test.jpg
+
+# Reproducible WordPress bundles — reinstalled by setup.sh via wp-cli from
+# the wp.org directory, so they're not tracked here. The custom plugin
+# (dreamrugs-core), the custom theme (dreamrugs), and woo-razorpay (not a
+# wp.org plugin) ARE tracked.
+wp-content/plugins/*
+!wp-content/plugins/dreamrugs-core/
+!wp-content/plugins/woo-razorpay/
+!wp-content/plugins/index.php
+wp-content/themes/twentytwentythree/
+wp-content/themes/twentytwentyfour/
+wp-content/themes/twentytwentyfive/
+wp-content/upgrade/
