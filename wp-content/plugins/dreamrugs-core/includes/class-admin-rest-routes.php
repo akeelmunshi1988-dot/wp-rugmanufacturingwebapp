@@ -974,6 +974,23 @@ class DRC_Admin_Rest_Routes {
 		'about_us_content_html',
 	);
 
+	/** Recursively sanitizes an arbitrarily-nested settings value: every
+	 * string leaf through wp_kses_post() (keeps newlines, drops scripts),
+	 * structure preserved. Used for the 'about_page' tree. */
+	private static function sanitize_deep( $value ) {
+		if ( is_array( $value ) ) {
+			$out = array();
+			foreach ( $value as $k => $v ) {
+				$out[ is_string( $k ) ? sanitize_key( $k ) : $k ] = self::sanitize_deep( $v );
+			}
+			return $out;
+		}
+		if ( is_string( $value ) ) {
+			return wp_kses_post( $value );
+		}
+		return $value; // bool / int / float / null
+	}
+
 	private static function sanitize_repeater_rows( array $rows, array $shape ): array {
 		$clean = array();
 		foreach ( $rows as $row ) {
@@ -1022,13 +1039,15 @@ class DRC_Admin_Rest_Routes {
 				// only the values need sanitizing.
 				$partial[ $key ] = array_map( 'sanitize_text_field', $value );
 			} elseif ( 'about_page' === $key ) {
-				// Structured, deeply-nested content edited as raw JSON in the
-				// Settings screen (see the 'json' field type in admin.js) —
-				// stored as-decoded so templates read it as a normal PHP array
-				// like every other settings value, not as a JSON string.
+				// Structured, deeply-nested /about page content (the 'about'
+				// field type in admin.js; still accepts a raw JSON string too).
+				// Stored as-decoded so templates read it as a normal PHP array.
+				// Every leaf string goes through wp_kses_post() — strips
+				// scripts/dangerous markup but, unlike sanitize_text_field(),
+				// keeps the newlines heading/body fields use for line breaks.
 				$decoded = is_array( $value ) ? $value : json_decode( (string) $value, true );
 				if ( is_array( $decoded ) ) {
-					$partial[ $key ] = $decoded;
+					$partial[ $key ] = self::sanitize_deep( $decoded );
 				}
 			} elseif ( in_array( $key, self::HTML_SETTINGS, true ) ) {
 				$partial[ $key ] = wp_kses_post( (string) $value );

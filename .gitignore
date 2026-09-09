@@ -8,6 +8,8 @@ wp-content/themes/dreamrugs/node_modules/
 __pycache__/
 *.pyc
 room-preview-test.jpg
+tests/quote-engine-parity/reference_out.json
+tests/quote-engine-parity/php_out.json
 
 # Reproducible WordPress bundles — reinstalled by setup.sh via wp-cli from
 # the wp.org directory, so they're not tracked here. The custom plugin

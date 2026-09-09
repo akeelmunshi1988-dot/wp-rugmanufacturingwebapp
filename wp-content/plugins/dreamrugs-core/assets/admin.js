@@ -655,7 +655,7 @@
 		[ 'homepage_contact_success_message', 'text', 'Contact Section: Success Message' ],
 		[ 'homepage_contact_enabled', 'checkbox', 'Contact Section: Show on Homepage' ],
 		[ 'about_us_content_html', 'textarea', 'About Page: Story Body (HTML)' ],
-		[ 'about_page', 'json', 'About Page: Structured Content (advanced, JSON)' ],
+		[ 'about_page', 'about', 'About Page: Sections' ],
 		[ 'refund_cancellation_policy_html', 'textarea', 'Refund & Cancellation Policy (HTML)' ],
 		[ 'privacy_policy_html', 'textarea', 'Privacy Policy (HTML)' ],
 		[ 'default_catalog_additional_information_html', 'textarea', 'Default Product Additional Info (HTML)' ],
@@ -683,6 +683,132 @@
 	// it's this store's real transactional currency (get_woocommerce_currency()),
 	// whose rate against itself is always 1 and isn't meaningful to edit.
 	var RATE_CURRENCIES = [ 'USD', 'EUR', 'GBP', 'CAD', 'AUD', 'AED', 'SGD', 'CHF', 'SAR', 'QAR', 'JPY', 'NZD', 'ZAR' ];
+
+	/** Structure of the /about page (DRC_Settings 'about_page'), mirroring
+	 * dreamrugs_about_page_defaults() in the theme's inc/about-page-content.php.
+	 * Each section: an `enabled` toggle, some scalar `fields`, and optionally
+	 * one repeatable `list`. `{business}` in any text is swapped for the site
+	 * name at render time by the theme — leave it as-is here. Empty fields
+	 * fall back to the theme's built-in copy (deep-merged), so a section only
+	 * needs the bits you want to override. */
+	var ABOUT_SECTIONS = [
+		[ 'hero', 'Hero', [
+			[ 'eyebrow', 'text', 'Eyebrow' ], [ 'heading', 'textarea', 'Heading' ], [ 'body', 'textarea', 'Body' ],
+			[ 'cta_label', 'text', 'CTA Label' ], [ 'image_url', 'image', 'Image' ], [ 'image_alt', 'text', 'Image Alt' ],
+		] ],
+		[ 'credentials', 'Credentials Strip', [], { key: 'items', label: 'Items', cols: [ [ 'title', 'text', 'Title' ], [ 'subtitle', 'text', 'Subtitle' ] ] } ],
+		[ 'story', 'Story', [
+			[ 'eyebrow', 'text', 'Eyebrow' ], [ 'heading', 'textarea', 'Heading' ], [ 'quote', 'textarea', 'Pull Quote' ],
+			[ 'primary_image_url', 'image', 'Primary Image' ], [ 'primary_image_alt', 'text', 'Primary Image Alt' ],
+			[ 'secondary_image_url', 'image', 'Secondary Image' ], [ 'secondary_image_alt', 'text', 'Secondary Image Alt' ],
+		] ],
+		[ 'process', 'Process', [
+			[ 'eyebrow', 'text', 'Eyebrow' ], [ 'heading', 'textarea', 'Heading' ], [ 'intro', 'textarea', 'Intro' ],
+		], { key: 'steps', label: 'Steps', cols: [ [ 'number', 'text', 'No.' ], [ 'title', 'text', 'Title' ], [ 'text', 'textarea', 'Text' ], [ 'image_url', 'image', 'Image' ], [ 'image_alt', 'text', 'Image Alt' ] ] } ],
+		[ 'principles', 'Principles', [
+			[ 'eyebrow', 'text', 'Eyebrow' ], [ 'heading', 'text', 'Heading' ], [ 'intro', 'textarea', 'Intro' ],
+		], { key: 'items', label: 'Items', cols: [ [ 'icon', 'text', 'Icon' ], [ 'title', 'text', 'Title' ], [ 'text', 'textarea', 'Text' ] ] } ],
+		[ 'founder', 'Founder Note', [
+			[ 'eyebrow', 'text', 'Eyebrow' ], [ 'heading', 'text', 'Heading' ], [ 'body', 'textarea', 'Body' ],
+			[ 'name', 'text', 'Name' ], [ 'role', 'text', 'Role' ], [ 'caption', 'text', 'Image Caption' ],
+			[ 'image_url', 'image', 'Image' ], [ 'image_alt', 'text', 'Image Alt' ],
+		] ],
+		[ 'cta', 'Closing CTA', [
+			[ 'eyebrow', 'text', 'Eyebrow' ], [ 'heading', 'textarea', 'Heading' ], [ 'body', 'textarea', 'Body' ],
+			[ 'primary_label', 'text', 'Primary Button' ], [ 'secondary_label', 'text', 'Secondary Button' ],
+		] ],
+	];
+
+	function renderAboutSection(def, value) {
+		var sectionKey = def[0], title = def[1], fields = def[2] || [], list = def[3];
+		value = value || {};
+		var enabled = value.enabled !== false; // default on, matching the theme
+		var fieldRows = fields.map( function ( f ) {
+			var k = f[0], type = f[1], label = f[2], v = value[ k ] == null ? '' : value[ k ];
+			var control;
+			if ( 'image' === type ) {
+				control = '<div class="drc-about-image" data-col="' + k + '">' +
+					'<div class="drc-image-preview" style="margin-bottom:6px;"></div>' +
+					'<input type="hidden" data-image-value value="' + esc( v ) + '">' +
+					'<button type="button" class="button button-small drc-image-choose">' + ( v ? 'Change' : 'Choose' ) + '</button> ' +
+					( v ? '<button type="button" class="button button-small drc-image-remove">Remove</button>' : '' ) +
+					'</div>';
+			} else if ( 'textarea' === type ) {
+				control = '<textarea data-col="' + k + '" rows="3" style="width:100%;max-width:560px;">' + esc( v ) + '</textarea>';
+			} else {
+				control = '<input type="text" data-col="' + k + '" value="' + esc( v ) + '" style="width:100%;max-width:560px;">';
+			}
+			return '<tr><th scope="row" style="font-weight:400;">' + esc( label ) + '</th><td>' + control + '</td></tr>';
+		} ).join( '' );
+
+		var listHtml = '';
+		if ( list ) {
+			var rows = ( value[ list.key ] || [] ).map( function ( row ) { return renderRepeaterRow( list, row ); } ).join( '' );
+			var head = list.cols.map( function ( c ) { return '<th>' + esc( c[2] ) + '</th>'; } ).join( '' );
+			listHtml =
+				'<p style="margin:8px 0 4px;font-weight:600;">' + esc( list.label ) + '</p>' +
+				'<div class="drc-about-list" data-list-key="' + list.key + '">' +
+				'<table class="widefat" style="max-width:760px;"><thead><tr>' + head + '<th></th></tr></thead><tbody>' + rows + '</tbody></table>' +
+				'<p><button type="button" class="button drc-repeater-add">+ Add ' + esc( list.label.replace( /s$/, '' ) ) + '</button></p>' +
+				'</div>';
+		}
+
+		return '<fieldset class="drc-about-section" data-section="' + sectionKey + '" style="border:1px solid #dcdcde;padding:12px 16px;margin:0 0 14px;">' +
+			'<legend style="padding:0 6px;font-weight:600;">' + esc( title ) + '</legend>' +
+			'<label style="display:block;margin-bottom:8px;"><input type="checkbox" data-about-enabled' + ( enabled ? ' checked' : '' ) + '> Show this section</label>' +
+			( fieldRows ? '<table class="form-table" style="margin:0;"><tbody>' + fieldRows + '</tbody></table>' : '' ) +
+			listHtml +
+			'</fieldset>';
+	}
+
+	function renderAboutField(value) {
+		value = value || {};
+		return '<div class="drc-about-field" data-key="about_page" data-type="about">' +
+			'<p style="color:#646970;font-size:12px;margin-top:0;">Leave any field blank to use the theme’s built-in wording. <code>{business}</code> is replaced with the site name.</p>' +
+			ABOUT_SECTIONS.map( function ( def ) { return renderAboutSection( def, value[ def[0] ] ); } ).join( '' ) +
+			'</div>';
+	}
+
+	function wireAboutField(field) {
+		field.querySelectorAll( '.drc-about-image' ).forEach( function ( img ) { wireImagePicker( img, {} ); } );
+		field.querySelectorAll( '.drc-about-list' ).forEach( function ( listField ) {
+			// Resolve via the containing section, not the list key — two
+			// sections both use the list key "items" (credentials, principles).
+			var secKey = listField.closest( '.drc-about-section' ).dataset.section;
+			var cfg = ABOUT_SECTIONS.find( function ( d ) { return d[0] === secKey; } )[3];
+			listField.querySelectorAll( 'tbody tr' ).forEach( wireRepeaterRow );
+			listField.querySelector( '.drc-repeater-add' ).addEventListener( 'click', function () {
+				var tbody = listField.querySelector( 'tbody' );
+				var wrap = document.createElement( 'tbody' );
+				wrap.innerHTML = renderRepeaterRow( cfg, {} );
+				var tr = wrap.firstElementChild;
+				tbody.appendChild( tr );
+				wireRepeaterRow( tr );
+			} );
+		} );
+	}
+
+	function readAboutField(field) {
+		var out = {};
+		field.querySelectorAll( '.drc-about-section' ).forEach( function ( sec ) {
+			var key = sec.dataset.section;
+			var def = ABOUT_SECTIONS.find( function ( d ) { return d[0] === key; } );
+			var obj = { enabled: sec.querySelector( '[data-about-enabled]' ).checked };
+			sec.querySelectorAll( 'table.form-table [data-col]' ).forEach( function ( input ) {
+				if ( input.closest( '.drc-about-image' ) ) {
+					obj[ input.closest( '.drc-about-image' ).dataset.col ] = input.closest( '.drc-about-image' ).querySelector( '[data-image-value]' ).value;
+				} else {
+					obj[ input.dataset.col ] = input.value;
+				}
+			} );
+			var listField = sec.querySelector( '.drc-about-list' );
+			if ( listField && def[3] ) {
+				obj[ def[3].key ] = readRepeaterRows( listField, def[3] );
+			}
+			out[ key ] = obj;
+		} );
+		return out;
+	}
 
 	/** Shared by the top-level 'image' settings field and each 'repeater'
 	 * column of type 'image' — one wp.media() picker wired to a hidden
@@ -743,9 +869,9 @@
 					'</div></td>';
 			}
 			if ( 'textarea' === colType ) {
-				return '<td><textarea class="drc-repeater-field" data-col="' + colKey + '" rows="3" style="width:100%;">' + esc( row[ colKey ] || '' ) + '</textarea></td>';
+				return '<td><textarea class="drc-repeater-cell" data-col="' + colKey + '" rows="3" style="width:100%;">' + esc( row[ colKey ] || '' ) + '</textarea></td>';
 			}
-			return '<td><input type="text" class="drc-repeater-field" data-col="' + colKey + '" value="' + esc( row[ colKey ] || '' ) + '" style="width:100%;"></td>';
+			return '<td><input type="text" class="drc-repeater-cell" data-col="' + colKey + '" value="' + esc( row[ colKey ] || '' ) + '" style="width:100%;"></td>';
 		} ).join( '' );
 		return '<tr>' + cells + '<td><button type="button" class="button-link-delete drc-repeater-remove">Remove</button></td></tr>';
 	}
@@ -854,6 +980,8 @@
 						'</div>';
 				} else if ( 'textarea' === type ) {
 					input = '<textarea data-key="' + key + '" data-type="textarea" rows="6" style="width:100%;max-width:640px;">' + esc( value || '' ) + '</textarea>';
+				} else if ( 'about' === type ) {
+					input = renderAboutField( value );
 				} else if ( 'json' === type ) {
 					var jsonText = value && Object.keys( value ).length ? JSON.stringify( value, null, 2 ) : '';
 					input = '<textarea data-key="' + key + '" data-type="json" rows="12" style="width:100%;max-width:640px;font-family:monospace;font-size:12px;" placeholder="{}">' + esc( jsonText ) + '</textarea>' +
@@ -916,6 +1044,8 @@
 					wireRepeaterRow( tr );
 				} );
 			} );
+
+			root.querySelectorAll( '.drc-about-field' ).forEach( wireAboutField );
 
 			root.querySelectorAll( '.drc-product-list-field' ).forEach( function ( field ) {
 				var tbody = field.querySelector( 'tbody' );
@@ -989,6 +1119,8 @@
 						body[ input.dataset.key ] = map;
 					} else if ( 'product-list' === type ) {
 						body[ input.dataset.key ] = Array.from( input.querySelectorAll( '.drc-product-list-select' ) ).map( function ( s ) { return parseInt( s.value, 10 ); } );
+					} else if ( 'about' === type ) {
+						body[ input.dataset.key ] = readAboutField( input );
 					} else {
 						body[ input.dataset.key ] = 'checkbox' === type ? input.checked : ( 'number' === type ? parseFloat( input.value ) : input.value );
 					}

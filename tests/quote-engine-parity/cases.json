@@ -1,0 +1,82 @@
+{
+  "_comment": "Shared fixtures + input matrix for the quote-engine parity check. Consumed by run_reference.py (drives the ORIGINAL backend/app/services/quote_engine.py) and run_php.php (drives wp-content/plugins/dreamrugs-core/includes/class-quote-engine.php). See README.md.",
+
+  "settings": {
+    "default_profit_margin_pct": 40.0,
+    "rush_surcharge_pct": 25.0,
+    "default_gst_pct": 12.0,
+    "large_format_threshold_sqm": 20.0,
+    "large_format_surcharge_pct": 5.0,
+    "currency": "INR"
+  },
+
+  "materials": [
+    { "id": 1, "name": "Hand-spun Wool", "type": "wool", "color": "Natural", "stock_meters": 500.0, "cost_per_sqm": 1200.0, "cost_currency": "INR", "is_available": true }
+  ],
+
+  "pricing_rules": [
+    { "name": "Bulk 5-100", "rule_type": "bulk_discount", "min_qty": 5, "max_qty": 100, "multiplier": 0.9, "description": "10% off for 5+ pieces" }
+  ],
+
+  "moq_rules": [
+    { "rug_type": "catalog", "minimum_sqm": null, "minimum_pieces": 1, "notes": "" }
+  ],
+
+  "production_timelines": [
+    { "order_type": "standard", "base_days": 14, "complexity_multiplier_per_sqm": 0.5, "notes": "" }
+  ],
+
+  "rugs": [
+    {
+      "id": 1,
+      "weave_type": "hand-knotted",
+      "lead_time_days": 20,
+      "base_price": 50000.0,
+      "base_price_currency": "INR",
+      "sizes": [
+        { "ft": "6x9",   "cm": null, "price": 50000.0,  "lead_time_days": 20 },
+        { "ft": "8x10",  "cm": null, "price": 80000.0,  "lead_time_days": null },
+        { "ft": "9x12",  "cm": null, "price": 120000.0, "lead_time_days": null },
+        { "ft": "15x18", "cm": null, "price": 300000.0, "lead_time_days": null }
+      ]
+    },
+    {
+      "id": 2,
+      "weave_type": "standard",
+      "lead_time_days": null,
+      "base_price": 25000.0,
+      "base_price_currency": "INR",
+      "sizes": [
+        { "ft": "4x6", "cm": null, "price": 25000.0, "lead_time_days": null }
+      ]
+    }
+  ],
+
+  "cases": [
+    { "id": "cat_basic",        "kind": "catalog", "rug_id": 1, "size": "6x9",   "material_id": 1, "qty": 1, "rush": false, "shape": "rect" },
+    { "id": "cat_bulk_qty5",    "kind": "catalog", "rug_id": 1, "size": "6x9",   "material_id": 1, "qty": 5, "rush": false, "shape": "rect" },
+    { "id": "cat_rush_saves",   "kind": "catalog", "rug_id": 1, "size": "6x9",   "material_id": 1, "qty": 1, "rush": true,  "shape": "rect" },
+    { "id": "cat_rotated",      "kind": "catalog", "rug_id": 1, "size": "9x6",   "material_id": 1, "qty": 1, "rush": false, "shape": "rect" },
+    { "id": "cat_large_format", "kind": "catalog", "rug_id": 1, "size": "15x18", "material_id": 1, "qty": 1, "rush": false, "shape": "rect" },
+    { "id": "cat_estimate_days","kind": "catalog", "rug_id": 2, "size": "4x6",   "material_id": 1, "qty": 1, "rush": true,  "shape": "rect" },
+    { "id": "cat_manual_disc",  "kind": "catalog", "rug_id": 1, "size": "8x10",  "material_id": 1, "qty": 2, "rush": false, "shape": "rect", "manual_discount_pct": 7.5 },
+
+    { "id": "custom_rect",      "kind": "custom", "material_id": 1, "size_w": 2.0, "size_h": 3.0, "qty": 1, "rush": false, "shape": "rect" },
+    { "id": "custom_ship_disc", "kind": "custom", "material_id": 1, "size_w": 2.0, "size_h": 3.0, "qty": 2, "rush": true,  "shape": "rect", "discount_pct": 10.0, "shipping_cost": 5000.0 },
+    { "id": "custom_circle",    "kind": "custom", "material_id": 1, "size_w": 3.0, "size_h": 3.0, "qty": 1, "rush": false, "shape": "circle" },
+    { "id": "custom_oval",      "kind": "custom", "material_id": 1, "size_w": 2.4, "size_h": 3.6, "qty": 1, "rush": false, "shape": "oval" },
+
+    { "id": "manual_price",     "kind": "manual", "final_price": 137500.0, "gst_pct": 12.0, "size_w": 2.0, "size_h": 3.0, "qty": 1, "shape": "rect" }
+  ],
+
+  "gst_modes": [false, true],
+
+  "compare_fields": [
+    "shape", "size_sqm", "total_sqm", "catalog_price_per_piece", "base_price_per_sqm",
+    "material_cost_per_sqm", "profit_margin_pct", "subtotal", "bulk_discount",
+    "manual_discount", "rush_surcharge", "size_surcharge", "shipping_cost",
+    "pre_gst_price", "gst_pct", "gst_amount", "gst_inclusive", "final_price",
+    "price_per_piece", "price_currency", "moq_met", "material_available",
+    "estimated_days", "standard_days", "rush_days", "rush_available"
+  ]
+}

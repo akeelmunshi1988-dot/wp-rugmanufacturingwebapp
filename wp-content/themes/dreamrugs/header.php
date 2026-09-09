@@ -10,9 +10,11 @@
  * from the original app's separate StaffUser/Customer tables — there is no
  * "admin browsing as a customer" duality here, just is_user_logged_in()
  * plus an extra Admin Panel link for users who can manage_woocommerce):
- * - Currency switcher is stubbed to a static display (single currency) —
- *   multi-currency is flagged as likely-dropped in the migration plan;
- *   swap in a real WOOCS-backed dropdown here if that decision reverses.
+ * - Currency switcher is a display-only converter (assets/currency.js,
+ *   ported from CurrencyContext.tsx) — it rewrites every .drc-price span,
+ *   the customer is still charged in the store's real WooCommerce currency.
+ *   Options come from DRC_Settings' `enabled_currencies` (empty ⇒ the full
+ *   set); the control hides itself when only one currency is offered.
  * - Announcement bar: reads the drc_announcement CPT
  *   (DRC_Content_Types::get_announcements()) and rotates through the active
  *   entries with the same 5s interval / 300ms fade as CustomerLayout.tsx.
@@ -211,22 +213,41 @@ $mega_menu = array(
 		</a>
 
 		<div class="hidden lg:flex items-center gap-5 ml-auto">
+			<?php
+			// Display-currency switcher. assets/currency.js does the actual
+			// conversion of every .drc-price span (ported from
+			// CurrencyContext.tsx) — the customer is still always charged in
+			// the store's real WooCommerce currency; this only changes shown
+			// numbers. The option list is driven by DRC_Settings'
+			// `enabled_currencies` so a vendor can narrow it; empty ⇒ the full
+			// set below (every code assets/currency.js knows a locale/symbol
+			// for). Hidden entirely when only one currency is on offer.
+			$drc_currency_labels = array(
+				'INR' => 'INR — ₹', 'USD' => 'USD — $', 'EUR' => 'EUR — €', 'GBP' => 'GBP — £',
+				'CAD' => 'CAD — CA$', 'AUD' => 'AUD — A$', 'AED' => 'AED', 'SGD' => 'SGD — S$',
+				'CHF' => 'CHF', 'SAR' => 'SAR', 'QAR' => 'QAR', 'JPY' => 'JPY — ¥',
+				'NZD' => 'NZD — NZ$', 'ZAR' => 'ZAR — R',
+			);
+			$drc_enabled_currencies = array_values( array_filter( (array) ( $drc_settings['enabled_currencies'] ?? array() ) ) );
+			$drc_currencies = $drc_enabled_currencies
+				? array_intersect_key( $drc_currency_labels, array_flip( $drc_enabled_currencies ) )
+				: $drc_currency_labels;
+			// Guarantee the store's own currency is always selectable.
+			$drc_base_currency = function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : 'INR';
+			if ( ! isset( $drc_currencies[ $drc_base_currency ] ) ) {
+				$drc_currencies = array( $drc_base_currency => $drc_currency_labels[ $drc_base_currency ] ?? $drc_base_currency ) + $drc_currencies;
+			}
+			?>
+			<?php if ( count( $drc_currencies ) > 1 ) : ?>
 			<div class="relative">
 				<select id="drc-currency-select" aria-label="Display currency" class="appearance-none bg-transparent text-sm text-stone-500 hover:text-stone-900 pr-4 py-1 focus:outline-none cursor-pointer transition-colors">
-					<?php
-					$drc_currencies = array(
-						'INR' => 'INR — ₹', 'USD' => 'USD — $', 'EUR' => 'EUR — €', 'GBP' => 'GBP — £',
-						'CAD' => 'CAD — CA$', 'AUD' => 'AUD — A$', 'AED' => 'AED', 'SGD' => 'SGD — S$',
-						'CHF' => 'CHF', 'SAR' => 'SAR', 'QAR' => 'QAR', 'JPY' => 'JPY — ¥',
-						'NZD' => 'NZD — NZ$', 'ZAR' => 'ZAR — R',
-					);
-					foreach ( $drc_currencies as $code => $label ) :
-					?>
+					<?php foreach ( $drc_currencies as $code => $label ) : ?>
 						<option value="<?php echo esc_attr( $code ); ?>"><?php echo esc_html( $label ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<span class="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-stone-400"><?php dreamrugs_icon( 'chevron-down', 11 ); ?></span>
 			</div>
+			<?php endif; ?>
 
 			<a href="<?php echo esc_url( wc_get_cart_url() ); ?>" class="relative text-stone-500 hover:text-stone-900 transition-colors">
 				<?php dreamrugs_icon( 'shopping-cart', 18 ); ?>
