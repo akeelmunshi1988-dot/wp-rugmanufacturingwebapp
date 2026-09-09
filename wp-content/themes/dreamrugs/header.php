@@ -102,20 +102,18 @@ $mega_menu = array(
 		infoBarDismissed: false,
 		announceFading: false,
 		announceIndex: 0,
-		announceItems: <?php echo wp_json_encode( array_map( function ( $a ) {
+		announceItems: <?php echo esc_attr( wp_json_encode( array_map( function ( $a ) {
 			return array( 'text' => $a['text'], 'link_url' => $a['link_url'] ?: null );
-		}, $drc_announcements ) ); ?>,
+		}, array_values( $drc_announcements ) ) ) ); ?>,
 		get activeAnnouncement() {
-			return this.announceItems.length ? this.announceItems[ this.announceIndex % this.announceItems.length ] : null;
+			return this.announceItems.length ? this.announceItems[this.announceIndex % this.announceItems.length] : null;
 		},
 		startAnnounceRotation() {
-			// Matches CustomerLayout.tsx: only rotates with 2+ messages, 5s
-			// cadence, 300ms fade-out before swapping the text.
-			if ( this.announceItems.length <= 1 ) return;
+			if (this.announceItems.length <= 1) return;
 			setInterval(() => {
 				this.announceFading = true;
 				setTimeout(() => {
-					this.announceIndex = ( this.announceIndex + 1 ) % this.announceItems.length;
+					this.announceIndex = (this.announceIndex + 1) % this.announceItems.length;
 					this.announceFading = false;
 				}, 300);
 			}, 5000);
