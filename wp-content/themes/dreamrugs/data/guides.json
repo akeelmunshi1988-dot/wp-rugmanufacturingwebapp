@@ -1,0 +1,382 @@
+{
+  "_comment": "Rug buying guides at /guides/<slug>. Read by GuidePage.tsx, GuidesIndex.tsx, scripts/prerender.js and the backend sitemap (app/main.py). Keep seoTitle <= 40 chars and description <= 155 chars so search results show them uncut.",
+  "guides": [
+    {
+      "slug": "hand-knotted-vs-hand-tufted-rugs",
+      "seoTitle": "Hand-Knotted vs Hand-Tufted Rugs",
+      "title": "Hand-Knotted vs Hand-Tufted Rugs: Which Should You Buy?",
+      "description": "How hand-knotted and hand-tufted rugs are made, how long each lasts, what they cost and which suits your room. A plain-English buying guide.",
+      "datePublished": "2026-10-02",
+      "intro": "Both are handmade, both can be made in wool or silk, and both can be made to any size. The difference is in how the pile is attached to the rug, and that decides how long it lasts, how long it takes to make, and what it costs.",
+      "sections": [
+        {
+          "heading": "How a hand-knotted rug is made",
+          "paragraphs": [
+            "A hand-knotted rug is woven on an upright loom. The weaver ties each knot of yarn individually around the vertical foundation threads (the warp), then locks each row in place with horizontal threads (the weft). The pile is part of the rug's structure, not attached to a backing.",
+            "Because every knot is tied by hand, a single rug can take several months. More knots per square inch allow finer detail and a denser, longer-lasting rug."
+          ]
+        },
+        {
+          "heading": "How a hand-tufted rug is made",
+          "paragraphs": [
+            "A hand-tufted rug is made by pushing loops of yarn through a stretched canvas with a hand-held tufting tool, following a design drawn on the canvas. The loops are then sheared to an even pile (or left as loops), and the back is secured with an adhesive and covered with a backing cloth.",
+            "Tufting is much faster than knotting, usually a matter of weeks, and is ideal for plush piles, bold shapes and carved, high-low textures."
+          ]
+        },
+        {
+          "heading": "Durability and lifespan",
+          "paragraphs": [
+            "A well-made hand-knotted wool rug can last for decades and is often passed down as an heirloom; it can also be cleaned and restored many times. A hand-tufted rug, cared for properly, gives many years of use, but its life is ultimately limited by the backing and adhesive."
+          ]
+        },
+        {
+          "heading": "Price",
+          "paragraphs": [
+            "Hand-tufted rugs cost less because they take far less labour. Hand-knotted rugs cost more, and the price rises with knot density, the fibre (silk costs more than wool) and the size. Think of a hand-knotted rug as a long-term investment and a hand-tufted rug as excellent value for a beautiful, soft rug."
+          ]
+        },
+        {
+          "heading": "Which should you choose?",
+          "paragraphs": [
+            "Choose hand-knotted for a formal living or dining room, an heirloom piece, or a rug in a busy room you want to keep for a very long time. Choose hand-tufted for a plush bedroom rug, a bold contemporary or sculpted design, a quicker turnaround, or a tighter budget.",
+            "Both can be made in custom sizes and colours, so you don't have to compromise on fit or design either way."
+          ]
+        }
+      ],
+      "faq": [
+        { "q": "How can I tell if a rug is hand-knotted?", "a": "Turn it over. On a hand-knotted rug the pattern shows clearly on the back, with small individual knots and no glued backing cloth. A hand-tufted rug usually has a fabric backing covering the reverse." },
+        { "q": "Is hand-tufted the same as machine-made?", "a": "No. A hand-tufted rug is made by an artisan using a hand-held tool, while a machine-woven rug is produced entirely on a power loom." },
+        { "q": "Which is softer underfoot?", "a": "Hand-tufted rugs are often plusher because they usually have a deeper, denser pile. Hand-knotted rugs feel firmer and flatter, especially with a fine, short pile." }
+      ],
+      "related": [
+        { "to": "/weaves/Hand-Knotted", "label": "Shop hand-knotted rugs" },
+        { "to": "/weaves/Hand-Tufted", "label": "Shop hand-tufted rugs" },
+        { "to": "/custom-rug-request", "label": "Request a custom rug" }
+      ]
+    },
+    {
+      "slug": "bhadohi-carpets",
+      "seoTitle": "Bhadohi Carpets: India's Carpet City",
+      "title": "Bhadohi Carpets: Inside India's Rug-Weaving Capital",
+      "description": "Why Bhadohi in Uttar Pradesh is known as India's Carpet City: its hand-knotting heritage, GI-tagged carpets, and buying handmade rugs from its weavers.",
+      "datePublished": "2026-10-02",
+      "intro": "Bhadohi, a district in the state of Uttar Pradesh in northern India, is often called the Carpet City of India. Together with neighbouring Mirzapur, it is the heart of India's handmade carpet industry, and it is where our rugs are made.",
+      "sections": [
+        {
+          "heading": "A weaving tradition passed down for generations",
+          "paragraphs": [
+            "Carpet weaving has been practised in the Bhadohi region for centuries. Skills such as hand-knotting, dyeing, washing and finishing are typically passed down within families and villages, and many households in the area are involved in some stage of making a rug.",
+            "Today the Bhadohi–Mirzapur belt produces a large share of the handmade carpets India exports to homes, hotels and designers around the world."
+          ]
+        },
+        {
+          "heading": "GI-tagged Bhadohi handmade carpets",
+          "paragraphs": [
+            "Handmade carpets from Bhadohi carry a Geographical Indication (GI) tag, the same kind of recognition given to regional specialities such as Darjeeling tea. It identifies the craft as distinctive to the region and its weaving communities."
+          ]
+        },
+        {
+          "heading": "What Bhadohi weavers make",
+          "paragraphs": [
+            "Bhadohi's workshops make almost every kind of handmade rug: fine hand-knotted wool and silk carpets, Indo-Tibetan knotted rugs, plush hand-tufted rugs, and flatwoven dhurries in wool, cotton and jute. Designs range from classic Persian- and Mughal-inspired patterns to modern abstract and minimal work.",
+            "Because production is handmade to order, the same weavers can make a rug to your exact size, colours and design."
+          ]
+        },
+        {
+          "heading": "Buying a Bhadohi rug from abroad",
+          "paragraphs": [
+            "Buying directly from a Bhadohi workshop means working with the people who make the rug, so you can specify the size, colours and materials and receive samples or colour references before production. Hand-knotted rugs take several months; hand-tufted and flatwoven rugs take weeks. We confirm the production time and shipping with every quote."
+          ]
+        }
+      ],
+      "faq": [
+        { "q": "Why is Bhadohi called the Carpet City of India?", "a": "Because hand-knotted and handmade carpet weaving is the region's defining industry, with generations of weavers and a large share of India's handmade carpet exports coming from the Bhadohi–Mirzapur belt." },
+        { "q": "Are Bhadohi carpets hand-knotted?", "a": "Many are. Bhadohi workshops make hand-knotted, hand-tufted and flatwoven rugs, so it is worth checking which construction you are buying." },
+        { "q": "Can I order a custom carpet from Bhadohi?", "a": "Yes. Rugs are made to order, so size, colour, material and design can be specified. Send us your requirements to get a quote." }
+      ],
+      "related": [
+        { "to": "/about", "label": "About our workshop" },
+        { "to": "/weaves/Hand-Knotted", "label": "Shop hand-knotted rugs" },
+        { "to": "/trade-enquiry", "label": "Trade and designer enquiries" }
+      ]
+    },
+    {
+      "slug": "custom-size-rug-from-india",
+      "seoTitle": "How to Order a Custom-Size Rug",
+      "title": "How to Order a Custom-Size Rug from India",
+      "description": "A step-by-step guide to ordering a custom-size handmade rug from India: measuring your room, choosing materials, samples, lead times and shipping.",
+      "datePublished": "2026-10-02",
+      "intro": "A made-to-order rug can be sized to the centimetre, so it fits your room instead of the nearest standard size. Here is how the process works, from measuring to delivery.",
+      "sections": [
+        {
+          "heading": "1. Measure your space",
+          "paragraphs": [
+            "Measure the floor area you want the rug to cover, not just the room. In a living room, size the rug so at least the front legs of the sofa and chairs sit on it. In a dining room, add roughly 60–75 cm (24–30 in) around the table on every side so chairs stay on the rug when pulled out. Under a bed, the rug should extend well beyond both sides.",
+            "Mark the outline on the floor with masking tape and live with it for a day; it is the easiest way to check the size feels right. Our rug size guide shows common layouts."
+          ]
+        },
+        {
+          "heading": "2. Choose the construction and material",
+          "paragraphs": [
+            "Hand-knotted rugs are the most durable and detailed; hand-tufted rugs are plusher and faster to make; flatweaves are slim and practical. Wool is the most versatile fibre, silk adds sheen and fine detail, and jute or cotton suit relaxed, natural rooms."
+          ]
+        },
+        {
+          "heading": "3. Agree the design and colours",
+          "paragraphs": [
+            "Choose a design from the collection, adapt one, or send your own reference. Colours can be matched to reference codes or samples, and a design drawing or colour reference is confirmed with you before weaving begins."
+          ]
+        },
+        {
+          "heading": "4. Production time",
+          "paragraphs": [
+            "Hand-tufted and flatwoven rugs usually take a few weeks. Hand-knotted rugs take several months, depending on size and knot density. Your quote includes a production estimate."
+          ]
+        },
+        {
+          "heading": "5. Shipping worldwide",
+          "paragraphs": [
+            "Finished rugs are washed, finished, inspected, rolled and packed for shipping. Delivery time and cost depend on the destination and the rug's size and weight; import duties and taxes depend on your country's rules. We confirm shipping details with your quote."
+          ]
+        }
+      ],
+      "faq": [
+        { "q": "Is a custom-size rug more expensive?", "a": "Handmade rugs are priced mainly by area, material and construction, so a custom size usually costs about the same per square metre as a standard size." },
+        { "q": "Can you make round or irregular shapes?", "a": "Yes. Round, oval and irregular shapes are possible, especially in hand-tufted construction." },
+        { "q": "Do you ship rugs internationally?", "a": "Yes, we ship worldwide. Shipping cost and delivery time are confirmed with your quote." }
+      ],
+      "related": [
+        { "to": "/rug-size-guide", "label": "Rug size guide" },
+        { "to": "/custom-rug-request", "label": "Request a custom rug" },
+        { "to": "/colour-matching", "label": "Colour matching" }
+      ]
+    },
+    {
+      "slug": "wool-vs-silk-vs-bamboo-silk-rugs",
+      "seoTitle": "Wool vs Silk vs Bamboo Silk Rugs",
+      "title": "Wool vs Silk vs Bamboo Silk Rugs: Choosing a Fibre",
+      "description": "Wool, silk and bamboo silk rugs compared: durability, sheen, softness, care and price, and which rug fibre suits each room in your home.",
+      "datePublished": "2026-10-02",
+      "intro": "The fibre a rug is made from affects how it looks, how it feels, how it wears and how you clean it. These are the three most common choices for handmade rugs and how they compare.",
+      "sections": [
+        {
+          "heading": "Wool: the all-rounder",
+          "paragraphs": [
+            "Wool is the classic rug fibre. Its natural crimp helps the pile spring back after footsteps, its lanolin helps it resist soiling, and it takes dye beautifully. Wool rugs are warm, sound-absorbing and suit almost every room, including busy living rooms and hallways.",
+            "New Zealand wool is prized for its long, bright fibres, which give clear colours and an even, resilient pile."
+          ]
+        },
+        {
+          "heading": "Silk: the finest detail and sheen",
+          "paragraphs": [
+            "Silk is very fine and strong, so it allows extremely detailed patterns, and its smooth surface reflects light with a lustre that changes as you walk around the rug. Pure silk rugs are the most expensive and best suited to lower-traffic rooms. Silk is often knotted into a wool rug as highlights, combining sheen with durability."
+          ]
+        },
+        {
+          "heading": "Bamboo silk: silk-like lustre for less",
+          "paragraphs": [
+            "Bamboo silk is a viscose (rayon) fibre made from bamboo cellulose. It is not true silk, but it has a similar sheen and softness at a lower price. Viscose is weaker when wet and can mark from spills, so it suits bedrooms and lower-traffic living spaces, and should be cleaned professionally."
+          ]
+        },
+        {
+          "heading": "Quick comparison",
+          "paragraphs": [
+            "Durability: wool is highest, then wool and silk blends, then pure silk and bamboo silk. Sheen: silk and bamboo silk are highest, wool is matte. Price: pure silk is highest, then wool and silk, then bamboo silk and wool. Easy care: wool is the most forgiving."
+          ]
+        }
+      ],
+      "faq": [
+        { "q": "Which rug fibre is best for a family home?", "a": "Wool. It is durable, resists soiling and recovers well from foot traffic, which makes it the most practical choice for busy rooms." },
+        { "q": "Is bamboo silk real silk?", "a": "No. Bamboo silk is a viscose fibre made from bamboo pulp. It looks similar to silk but is less durable, especially when wet." },
+        { "q": "Can a rug combine wool and silk?", "a": "Yes. Wool and silk rugs use a wool pile for durability with silk highlights for sheen and detail." }
+      ],
+      "related": [
+        { "to": "/collections/material/Wool", "label": "Shop wool rugs" },
+        { "to": "/collections/material/Wool%20%26%20Silk", "label": "Shop wool and silk rugs" },
+        { "to": "/collections/material/Wool%20%26%20Bamboo%20Silk", "label": "Shop wool and bamboo silk rugs" }
+      ]
+    },
+    {
+      "slug": "how-to-care-for-a-handmade-rug",
+      "seoTitle": "How to Care for a Handmade Rug",
+      "title": "How to Care for a Handmade Rug",
+      "description": "Simple care for handmade wool and silk rugs: vacuuming, rotating, handling spills, rug pads and professional cleaning, so your rug lasts for decades.",
+      "datePublished": "2026-10-02",
+      "intro": "A handmade rug needs very little care to last a long time. A few simple habits keep it looking its best for decades.",
+      "sections": [
+        {
+          "heading": "Vacuum regularly, gently",
+          "paragraphs": [
+            "Vacuum once or twice a week in busy rooms, using suction only or with the beater bar switched off, as a rotating brush can pull at the pile and fringes. Vacuum in the direction of the pile. Some shedding from a new wool rug is normal and settles down after a few weeks."
+          ]
+        },
+        {
+          "heading": "Rotate the rug",
+          "paragraphs": [
+            "Turn the rug 180 degrees every six to twelve months so it wears and fades evenly, especially if one side gets more sun or foot traffic."
+          ]
+        },
+        {
+          "heading": "Deal with spills straight away",
+          "paragraphs": [
+            "Blot, don't rub. Press a clean white cloth on the spill to absorb as much as possible, working from the outside inwards. For wool, a little cold water can help; for silk and bamboo silk, avoid water and call a professional cleaner."
+          ]
+        },
+        {
+          "heading": "Use a rug pad",
+          "paragraphs": [
+            "A good rug pad stops the rug slipping, adds cushioning, reduces wear on the back of the rug and protects the floor underneath."
+          ]
+        },
+        {
+          "heading": "Professional cleaning",
+          "paragraphs": [
+            "Have a handmade rug cleaned by a specialist rug cleaner every one to three years, depending on traffic. Avoid steam cleaning and harsh household chemicals, particularly on silk and viscose."
+          ]
+        }
+      ],
+      "faq": [
+        { "q": "Can I wash a handmade rug at home?", "a": "Small spot-cleaning of wool is fine, but a full wash should be done by a professional rug cleaner, who can dry the rug properly and protect the dyes." },
+        { "q": "How do I stop a rug from fading?", "a": "Rotate it regularly and limit strong direct sunlight with blinds or curtains, especially for silk and deeply coloured rugs." },
+        { "q": "Why is my new wool rug shedding?", "a": "Loose fibres left from finishing work their way out in the first weeks. Regular gentle vacuuming removes them, and shedding reduces over time." }
+      ],
+      "related": [
+        { "to": "/collections/material/Wool", "label": "Shop wool rugs" },
+        { "to": "/catalog", "label": "Browse all rugs" }
+      ]
+    },
+    {
+      "slug": "what-size-rug-for-living-room",
+      "seoTitle": "What Size Rug for a Living Room?",
+      "title": "What Size Rug Do You Need for Your Living Room?",
+      "description": "How to choose the right living room rug size: standard rug sizes, the three furniture layouts, how much floor to leave, and when to go custom.",
+      "datePublished": "2026-10-02",
+      "intro": "The most common rug mistake is choosing one that is too small. A rug that is sized to your furniture pulls the room together; one that floats in the middle makes it feel smaller. These simple rules help you get it right.",
+      "sections": [
+        {
+          "heading": "Common rug sizes",
+          "paragraphs": [
+            "Standard rug sizes include 5 x 8 ft (about 160 x 230 cm), 6 x 9 ft, 8 x 10 ft (about 240 x 300 cm), 9 x 12 ft and 10 x 14 ft. In most living rooms, 8 x 10 ft or 9 x 12 ft works best. Smaller sizes suit compact rooms or reading corners.",
+            "If none of these fit your room, a made-to-order rug can be woven to any size."
+          ]
+        },
+        {
+          "heading": "Three layouts that work",
+          "paragraphs": [
+            "All legs on: the rug is large enough for every piece of seating to sit fully on it. This feels the most luxurious and suits large and open-plan rooms.",
+            "Front legs on: the front legs of the sofa and chairs sit on the rug and the back legs on the floor. This is the most popular layout and works in most rooms.",
+            "Floating: only the coffee table sits on the rug. It suits small rooms, but the rug should still be at least as wide as the sofa."
+          ]
+        },
+        {
+          "heading": "Leave a border of floor",
+          "paragraphs": [
+            "In most rooms, leave around 30 to 45 cm (12 to 18 in) of bare floor between the rug and the walls. In a smaller room, 20 cm (8 in) is enough. The rug should also extend roughly 15 to 20 cm (6 to 8 in) beyond each end of the sofa."
+          ]
+        },
+        {
+          "heading": "Measure before you buy",
+          "paragraphs": [
+            "Mark the outline of the rug on the floor with masking tape and leave it there for a day. Walk around it and check that doors open freely and that the main seating sits on it the way you want."
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "q": "Is 5 x 8 too small for a living room?",
+          "a": "Often, yes. A 5 x 8 ft rug only works in a small room or with a floating layout. Most living rooms need at least 8 x 10 ft so the front legs of the seating can sit on it."
+        },
+        {
+          "q": "Should the rug be bigger than the sofa?",
+          "a": "Yes. Ideally the rug extends about 15 to 20 cm beyond each end of the sofa."
+        },
+        {
+          "q": "Can I get a rug made in a non-standard size?",
+          "a": "Yes. Our rugs are made to order, so we can weave one to your exact measurements."
+        }
+      ],
+      "related": [
+        {
+          "to": "/rug-size-guide",
+          "label": "Rug size guide"
+        },
+        {
+          "to": "/collections/space/living_room",
+          "label": "Shop living room rugs"
+        },
+        {
+          "to": "/custom-rug-request",
+          "label": "Request a custom-size rug"
+        }
+      ]
+    },
+    {
+      "slug": "why-are-hand-knotted-rugs-expensive",
+      "seoTitle": "Why Are Hand-Knotted Rugs Expensive?",
+      "title": "Why Are Hand-Knotted Rugs So Expensive?",
+      "description": "What goes into the price of a hand-knotted rug: months of weaving, knot density, wool and silk, dyeing and finishing, and a lifespan of decades.",
+      "datePublished": "2026-10-02",
+      "intro": "A hand-knotted rug can cost several times as much as a machine-made rug of the same size. The difference comes down to time, skill and materials, and to how long the rug will last.",
+      "sections": [
+        {
+          "heading": "Months of skilled hand work",
+          "paragraphs": [
+            "Every knot is tied by hand. A room-sized rug can contain hundreds of thousands of knots, and even an experienced team of weavers takes several months to complete one. Labour is by far the largest part of the cost."
+          ]
+        },
+        {
+          "heading": "Knot density",
+          "paragraphs": [
+            "The more knots per square inch, the finer the detail and the longer the rug takes to weave. A finely knotted rug with intricate curves can take much longer than a coarser rug of the same size with a simple design."
+          ]
+        },
+        {
+          "heading": "Materials",
+          "paragraphs": [
+            "Good-quality wool, hand-spun yarn and silk all cost more than synthetic fibres. Silk in particular raises the price, both because the fibre is expensive and because it is slower to weave."
+          ]
+        },
+        {
+          "heading": "Dyeing, washing and finishing",
+          "paragraphs": [
+            "Before and after weaving, the yarn is dyed, and the finished rug is washed, dried, clipped to an even pile, and has its edges and fringes finished by hand. Each step needs its own specialists."
+          ]
+        },
+        {
+          "heading": "Cost per year of use",
+          "paragraphs": [
+            "A well-made hand-knotted wool rug can last for decades and be cleaned and restored many times, while a cheaper rug may need replacing after a few years. Spread over its lifetime, a hand-knotted rug is often good value. If budget matters more than longevity, a hand-tufted rug offers a handmade look and feel for less."
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "q": "Are hand-knotted rugs worth the money?",
+          "a": "For a rug you want to keep for many years, usually yes. They are extremely durable, can be repaired, and often hold their value better than machine-made rugs."
+        },
+        {
+          "q": "What is a cheaper alternative to a hand-knotted rug?",
+          "a": "A hand-tufted rug. It is still made by hand, with a soft wool pile, but it takes weeks rather than months to make, so it costs less."
+        },
+        {
+          "q": "Why do two hand-knotted rugs of the same size cost different amounts?",
+          "a": "Knot density, the fibre (wool, wool and silk, or pure silk) and the complexity of the design all change how long the rug takes to make and what it costs."
+        }
+      ],
+      "related": [
+        {
+          "to": "/guides/hand-knotted-vs-hand-tufted-rugs",
+          "label": "Hand-knotted vs hand-tufted"
+        },
+        {
+          "to": "/weaves/Hand-Knotted",
+          "label": "Shop hand-knotted rugs"
+        },
+        {
+          "to": "/custom-rug-request",
+          "label": "Get a quote"
+        }
+      ]
+    }
+  ]
+}

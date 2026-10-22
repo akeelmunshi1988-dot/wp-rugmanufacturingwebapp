@@ -71,7 +71,7 @@ $field = function ( $key ) use ( $fields, $checkout, $input_class, $label_class 
 		<?php else : ?>
 			<div class="flex items-center justify-between gap-2">
 				<p class="text-stone-500 text-sm">Continue as guest</p>
-				<a href="<?php echo esc_url( wp_login_url( wc_get_checkout_url() ) ); ?>" class="flex items-center gap-1.5 text-sm text-stone-400 hover:text-stone-900 transition-colors underline underline-offset-2">
+				<a href="<?php echo esc_url( dreamrugs_login_url( wc_get_checkout_url() ) ); ?>" class="flex items-center gap-1.5 text-sm text-stone-400 hover:text-stone-900 transition-colors underline underline-offset-2">
 					<?php dreamrugs_icon( 'log-in', 13 ); ?> Sign in instead
 				</a>
 			</div>
@@ -98,6 +98,7 @@ $field = function ( $key ) use ( $fields, $checkout, $input_class, $label_class 
 			$field( 'billing_company' );
 			?>
 		</div>
+		<?php $field( 'billing_gstin' ); ?>
 	</div>
 
 	<div class="px-5 py-4 border-y border-stone-100 flex items-center gap-2">

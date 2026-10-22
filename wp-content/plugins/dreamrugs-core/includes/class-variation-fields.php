@@ -33,6 +33,26 @@ class DRC_Variation_Fields {
 	public static function init() {
 		add_action( 'woocommerce_product_after_variable_attributes', array( __CLASS__, 'render_fields' ), 10, 3 );
 		add_action( 'woocommerce_save_product_variation', array( __CLASS__, 'save_fields' ), 10, 2 );
+		add_action( 'admin_footer', array( __CLASS__, 'size_suggestions' ) );
+	}
+
+	/** Common sizes (DreamRugs → Catalog Masters) offered as suggestions in
+	 * every variation's ft/cm field — typing anything else still works. */
+	public static function size_suggestions() {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( ! $screen || 'product' !== $screen->id || ! class_exists( 'DRC_Catalog_Masters' ) ) {
+			return;
+		}
+		$sizes = DRC_Catalog_Masters::get( 'sizes', true );
+		echo '<datalist id="drc-size-ft-options">';
+		foreach ( array_unique( array_filter( wp_list_pluck( $sizes, 'ft' ) ) ) as $ft ) {
+			echo '<option value="' . esc_attr( $ft ) . '"></option>';
+		}
+		echo '</datalist><datalist id="drc-size-cm-options">';
+		foreach ( array_unique( array_filter( wp_list_pluck( $sizes, 'cm' ) ) ) as $cm ) {
+			echo '<option value="' . esc_attr( $cm ) . '"></option>';
+		}
+		echo '</datalist>';
 	}
 
 	/**
@@ -55,6 +75,7 @@ class DRC_Variation_Fields {
 					type="text"
 					id="drc_size_ft_<?php echo esc_attr( $loop ); ?>"
 					name="drc_size_ft[<?php echo esc_attr( $loop ); ?>]"
+					list="drc-size-ft-options"
 					value="<?php echo esc_attr( $ft ); ?>"
 					style="width:100%;"
 				>
@@ -67,6 +88,7 @@ class DRC_Variation_Fields {
 					type="text"
 					id="drc_size_cm_<?php echo esc_attr( $loop ); ?>"
 					name="drc_size_cm[<?php echo esc_attr( $loop ); ?>]"
+					list="drc-size-cm-options"
 					value="<?php echo esc_attr( $cm ); ?>"
 					style="width:100%;"
 				>

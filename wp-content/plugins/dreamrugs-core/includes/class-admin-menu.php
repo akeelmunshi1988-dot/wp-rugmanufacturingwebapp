@@ -31,10 +31,15 @@ class DRC_Admin_Menu {
 
 		add_submenu_page( 'dreamrugs-core', 'Dashboard', 'Dashboard', 'manage_woocommerce', 'dreamrugs-core', array( __CLASS__, 'render_dashboard' ) );
 		add_submenu_page( 'dreamrugs-core', 'Quotes', 'Quotes', 'manage_woocommerce', 'dreamrugs-quotes', array( __CLASS__, 'render_quotes' ) );
+		add_submenu_page( 'dreamrugs-core', 'Quote Builder', 'Quote Builder', 'manage_woocommerce', 'dreamrugs-quote-builder', array( __CLASS__, 'render_quote_builder' ) );
 		add_submenu_page( 'dreamrugs-core', 'Inventory', 'Inventory', 'manage_woocommerce', 'dreamrugs-inventory', array( __CLASS__, 'render_inventory' ) );
+		add_submenu_page( 'dreamrugs-core', 'Catalog Masters', 'Catalog Masters', 'manage_woocommerce', 'dreamrugs-catalog-masters', array( __CLASS__, 'render_catalog_masters' ) );
+		add_submenu_page( 'dreamrugs-core', 'Website Menu', 'Website Menu', 'manage_woocommerce', 'dreamrugs-website-menu', array( __CLASS__, 'render_website_menu' ) );
 		add_submenu_page( 'dreamrugs-core', 'Pricing Rules', 'Pricing Rules', 'manage_woocommerce', 'dreamrugs-pricing-rules', array( __CLASS__, 'render_pricing_rules' ) );
 		add_submenu_page( 'dreamrugs-core', 'Trade Enquiries', 'Trade Enquiries', 'manage_woocommerce', 'dreamrugs-trade-enquiries', array( __CLASS__, 'render_trade_enquiries' ) );
 		add_submenu_page( 'dreamrugs-core', 'Homepage Enquiries', 'Homepage Enquiries', 'manage_woocommerce', 'dreamrugs-homepage-enquiries', array( __CLASS__, 'render_homepage_enquiries' ) );
+		add_submenu_page( 'dreamrugs-core', 'Newsletter', 'Newsletter', 'manage_woocommerce', 'dreamrugs-newsletter', array( __CLASS__, 'render_newsletter' ) );
+		add_submenu_page( 'dreamrugs-core', 'Email Templates', 'Email Templates', 'manage_woocommerce', 'dreamrugs-email-templates', array( __CLASS__, 'render_email_templates' ) );
 		add_submenu_page( 'dreamrugs-core', 'Settings', 'Settings', 'manage_woocommerce', 'dreamrugs-settings', array( __CLASS__, 'render_settings' ) );
 
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
@@ -44,14 +49,15 @@ class DRC_Admin_Menu {
 		if ( strpos( $hook, 'dreamrugs' ) === false ) {
 			return;
 		}
-		if ( strpos( $hook, 'dreamrugs-settings' ) !== false ) {
+		if ( strpos( $hook, 'dreamrugs-settings' ) !== false || strpos( $hook, 'dreamrugs-catalog-masters' ) !== false ) {
 			wp_enqueue_media(); // Needed for the hero-image picker's wp.media() call.
 		}
 		wp_enqueue_script( 'dreamrugs-admin', DRC_PLUGIN_URL . 'assets/admin.js', array(), DRC_DB_VERSION, true );
 		wp_add_inline_script( 'dreamrugs-admin', 'window.drcAdmin = ' . wp_json_encode( array(
 			'nonce'    => wp_create_nonce( 'wp_rest' ),
 			'root'     => esc_url_raw( rest_url( 'dreamrugs/v1' ) ),
-			'currency' => get_woocommerce_currency(),
+			'currency'     => get_woocommerce_currency(),
+			'businessName' => DRC_Email_Templates::tenant_name(),
 		) ) . ';', 'before' );
 		wp_enqueue_style( 'dreamrugs-admin', DRC_PLUGIN_URL . 'assets/admin.css', array(), DRC_DB_VERSION );
 	}
@@ -106,6 +112,35 @@ class DRC_Admin_Menu {
 		<div class="wrap">
 			<h1>Homepage Enquiries</h1>
 			<div id="drc-homepage-enquiries-root">Loading…</div>
+		</div>
+		<?php
+	}
+
+	public static function render_quote_builder() {
+		self::shell( 'Quote Builder', 'drc-quote-builder-root' );
+	}
+
+	public static function render_catalog_masters() {
+		self::shell( 'Catalog Masters', 'drc-catalog-masters-root' );
+	}
+
+	public static function render_website_menu() {
+		self::shell( 'Website Menu', 'drc-website-menu-root' );
+	}
+
+	public static function render_newsletter() {
+		self::shell( 'Newsletter Subscribers', 'drc-newsletter-root' );
+	}
+
+	public static function render_email_templates() {
+		self::shell( 'Email Templates', 'drc-email-templates-root' );
+	}
+
+	private static function shell( string $title, string $root_id ) {
+		?>
+		<div class="wrap">
+			<h1><?php echo esc_html( $title ); ?></h1>
+			<div id="<?php echo esc_attr( $root_id ); ?>">Loading…</div>
 		</div>
 		<?php
 	}

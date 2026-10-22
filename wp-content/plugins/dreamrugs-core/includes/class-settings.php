@@ -24,7 +24,7 @@ class DRC_Settings {
 			'state_code'                   => '',
 			'address'                      => '',
 			'lut_number'                   => '',
-			'currency'                     => 'USD', // generic default — a vendor selling from India can still switch this to INR in Settings.
+			'currency'                     => 'INR', // always overridden by WooCommerce's store currency in all() — see there.
 			'default_profit_margin_pct'    => 40.0,
 			'rush_surcharge_pct'           => 25.0,
 			'default_gst_pct'              => 12.0,
@@ -118,12 +118,40 @@ class DRC_Settings {
 			// the original app's behavior exactly (it never took payment in
 			// anything but the tenant's base_currency either).
 			'exchange_rates'               => array(),
+			// false = rates are only ever edited by hand (the daily sync and
+			// "Sync Now" leave them alone) — Tenant.exchange_rates_auto.
+			'exchange_rates_auto'          => true,
+			// {platform: profile URL} for instagram/pinterest/linkedin/facebook/
+			// youtube/x — header icons, footer "Follow" grid, Instagram handle.
+			'social_links'                 => array(),
+			// {menu-key: false} hides that nav item / mega-menu heading / link
+			// (same keys as storefront_menu_labels) — storefront_menu_visibility.
+			'storefront_menu_visibility'   => array(),
+			// Rotating headings for the homepage Project Gallery section.
+			'homepage_gallery_titles'      => array(),
+			// Cloudflare Turnstile for public forms; empty = honeypot only.
+			'turnstile_site_key'           => '',
+			'turnstile_secret_key'         => '',
+			// Comma-separated personal tokens; when set, visitors browsing
+			// from India need ?key=<token> once (DRC_Geo). Empty = no gate.
+			'india_access_keys'            => '',
+			// Require customers to confirm their email before signing in
+			// (the original's Customer.is_verified flow).
+			'require_email_verification'   => true,
 		);
 	}
 
 	public static function all(): array {
 		$stored = get_option( self::OPTION_KEY, array() );
-		return wp_parse_args( is_array( $stored ) ? $stored : array(), self::defaults() );
+		$all    = wp_parse_args( is_array( $stored ) ? $stored : array(), self::defaults() );
+		// The pricing/base currency IS WooCommerce's store currency — one
+		// source of truth, so quotes can never be stamped in a different
+		// currency from the one checkout charges (the original's
+		// Tenant.base_currency). Change it under WooCommerce → Settings.
+		if ( class_exists( 'DRC_Multi_Currency' ) && function_exists( 'get_woocommerce_currency' ) ) {
+			$all['currency'] = DRC_Multi_Currency::base();
+		}
+		return $all;
 	}
 
 	public static function get( string $key ) {

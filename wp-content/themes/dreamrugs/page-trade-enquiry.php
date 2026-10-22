@@ -47,19 +47,37 @@ get_header();
 					this.submitting = true; this.message = '';
 					var form = new FormData($el);
 					var body = Object.fromEntries(form.entries());
+					var bot = window.drcBot || null;
+					// Same message the original opens in WhatsApp (or an email
+					// draft) so the customer can reach the studio directly too.
+					var labels = { first_name: 'First name', last_name: 'Last name', email: 'Email', phone: 'Phone', city: 'City', country: 'Country', profession: 'Which best describes you', company: 'Company / studio', website: 'Website / Instagram', project_type: 'Primary project type', project_brief: 'Tell us about your work' };
+					var text = 'Trade enquiry\n\n' + Object.keys(labels).map(function (k) { return labels[k] + ': ' + (String(body[k] || '').trim() || 'Not provided'); }).join('\n');
+					var studioPhone = '<?php echo esc_js( preg_replace( '/\D/', '', (string) ( dreamrugs_settings()['contact_phones'][0] ?? '' ) ) ); ?>';
+					var studioEmail = '<?php echo esc_js( (string) ( dreamrugs_settings()['contact_emails'][0] ?? '' ) ); ?>';
+					var waWindow = studioPhone ? window.open('', '_blank') : null; // opened in the click so popup blockers allow it
 					fetch('<?php echo esc_url( rest_url( 'dreamrugs/v1/trade-enquiry' ) ); ?>', {
-						method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+						method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, bot ? bot.headers($el) : {}), body: JSON.stringify(Object.assign(body, bot ? bot.fields($el) : {}))
 					}).then(function (r) {
 						if (!r.ok) return r.json().then(function (d) { throw new Error(d.message || 'Something went wrong.'); });
 						return r.json();
 					}).then(() => {
-						this.message = 'Thank you — your enquiry has been sent. Our team will be in touch shortly.';
+						if (waWindow) {
+							waWindow.location.href = 'https://wa.me/' + studioPhone + '?text=' + encodeURIComponent(text);
+							this.message = 'Thank you — your enquiry has been sent. It is also ready in WhatsApp: review it and press Send to reach the studio directly.';
+						} else if (studioEmail) {
+							window.location.href = 'mailto:' + studioEmail + '?subject=Trade%20enquiry&body=' + encodeURIComponent(text);
+							this.message = 'Thank you — your enquiry has been sent. An email draft is also ready if you would like to write to the studio directly.';
+						} else {
+							this.message = 'Thank you — your enquiry has been sent. Our team will be in touch shortly.';
+						}
 						$el.reset();
-					}).catch((e) => { this.message = e.message; }).finally(() => { this.submitting = false; });
+					}).catch((e) => { if (waWindow) waWindow.close(); this.message = e.message; }).finally(() => { this.submitting = false; });
 				}
 			}"
 			@submit.prevent="submit()"
+			data-drc-bot-form
 		>
+			<?php if ( function_exists( 'dreamrugs_bot_fields' ) ) { dreamrugs_bot_fields(); } ?>
 			<div class="border-b border-stone-300 pb-6">
 				<p class="storefront-eyebrow">Trade partner enquiry</p>
 				<h2 class="storefront-heading mt-3 text-3xl">Tell us about your practice.</h2>
@@ -70,8 +88,8 @@ get_header();
 				<div><label class="<?php echo esc_attr( $label_class ); ?>">Last name *</label><input name="last_name" required maxlength="150" autocomplete="family-name" class="<?php echo esc_attr( $input_class ); ?>" /></div>
 				<div><label class="<?php echo esc_attr( $label_class ); ?>">Email *</label><input type="email" name="email" required autocomplete="email" class="<?php echo esc_attr( $input_class ); ?>" /></div>
 				<div><label class="<?php echo esc_attr( $label_class ); ?>">Phone *</label><input type="tel" name="phone" required autocomplete="tel" class="<?php echo esc_attr( $input_class ); ?>" /></div>
-				<div><label class="<?php echo esc_attr( $label_class ); ?>">City</label><input name="city" maxlength="150" autocomplete="address-level2" class="<?php echo esc_attr( $input_class ); ?>" /></div>
-				<div><label class="<?php echo esc_attr( $label_class ); ?>">Country</label><input name="country" maxlength="150" autocomplete="country-name" class="<?php echo esc_attr( $input_class ); ?>" /></div>
+				<div><label class="<?php echo esc_attr( $label_class ); ?>">City *</label><input name="city" required maxlength="150" autocomplete="address-level2" class="<?php echo esc_attr( $input_class ); ?>" /></div>
+				<div><label class="<?php echo esc_attr( $label_class ); ?>">Country *</label><input name="country" required maxlength="150" autocomplete="country-name" class="<?php echo esc_attr( $input_class ); ?>" /></div>
 			</div>
 
 			<fieldset class="border-y border-stone-300 py-5">

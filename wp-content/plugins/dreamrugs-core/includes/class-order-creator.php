@@ -27,7 +27,7 @@ class DRC_Order_Creator {
 	 *
 	 * @return WC_Order|WP_Error
 	 */
-	public static function create_from_quote( array $quote ) {
+	public static function create_from_quote( array $quote, string $coupon_code = '' ) {
 		if ( ! empty( $quote['wc_order_id'] ) ) {
 			return new WP_Error( 'drc_already_ordered', 'An order already exists for this quote.' );
 		}
@@ -57,11 +57,33 @@ class DRC_Order_Creator {
 		}
 
 		$order->update_meta_data( '_drc_quote_id', $quote['id'] );
+		// Same lead-time rule as quotes.py update_quote()'s accept branch.
+		$lead_days = $quote['expected_delivery_days'] ? (int) $quote['expected_delivery_days'] : 0;
+		if ( ! $lead_days ) {
+			$lead_days = (int) ( get_post_meta( (int) $quote['product_id'], '_drc_lead_time_days', true ) ?: 21 );
+			if ( $quote['rush_order'] ) {
+				$lead_days = max( 7, intdiv( $lead_days, 2 ) );
+			}
+		}
+		$order->update_meta_data( '_drc_estimated_delivery', gmdate( 'Y-m-d', time() + $lead_days * DAY_IN_SECONDS ) );
 		// Canonical total, set directly on the order (not derived by
 		// summing line items, and WooCommerce's calculate_totals() is
 		// deliberately never called) — see this file's header comment.
 		$order->set_total( (float) $quote['final_price'] );
 		$order->save();
+
+		// Optional promo code at acceptance (the original accept_quote()
+		// took one). WooCommerce validates it (dates, usage limits, email
+		// restrictions) and takes the discount off the canonical total —
+		// the line item already equals final_price, so nothing is added.
+		if ( '' !== $coupon_code ) {
+			$applied = $order->apply_coupon( wc_format_coupon_code( $coupon_code ) );
+			if ( is_wp_error( $applied ) ) {
+				$order->delete( true );
+				return new WP_Error( 'drc_invalid_promo', html_entity_decode( wp_strip_all_tags( $applied->get_error_message() ), ENT_QUOTES, 'UTF-8' ) );
+			}
+			$order->save();
+		}
 
 		global $wpdb;
 		$wpdb->update(

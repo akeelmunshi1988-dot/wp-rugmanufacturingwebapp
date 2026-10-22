@@ -132,7 +132,7 @@ function customRugRequest(config) {
 				const res = await fetch(`${this.restUrl}/custom-rug-request`, {
 					method: 'POST',
 					credentials: 'same-origin',
-					headers: drcRestHeaders({ 'Content-Type': 'application/json' }),
+					headers: drcRestHeaders(Object.assign({ 'Content-Type': 'application/json' }, window.drcBot ? window.drcBot.headers(this.$root.querySelector('form')) : {})),
 					body: JSON.stringify({
 						name: this.form.name.trim(),
 						email: this.form.email.trim(),

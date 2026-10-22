@@ -1,0 +1,87 @@
+{
+  "_comment": "Keyword landing pages, each served at its own root path (e.g. /moroccan-rugs). Read by LandingPage.tsx (routes are generated in App.tsx), scripts/prerender.js and the backend sitemap (app/main.py). 'rugSearch' lists catalog rugs whose name/description matches it; omit it for pages without a rug grid. Keep seoTitle <= 40 chars and description <= 155 chars.",
+  "pages": [
+    {
+      "path": "/moroccan-rugs",
+      "seoTitle": "Moroccan Style Rugs, Hand-Knotted",
+      "description": "Hand-knotted Moroccan style and Beni Ourain inspired rugs in soft wool, with classic diamond and lattice designs. Made to order in India in any size.",
+      "eyebrow": "Style",
+      "title": "Moroccan Style Rugs",
+      "intro": "Inspired by the Berber weaving of Morocco's Atlas Mountains, Moroccan style rugs pair a deep, soft wool pile with simple hand-drawn lines: ivory grounds, charcoal diamonds and relaxed lattices that suit modern, Scandinavian and natural interiors alike.",
+      "sections": [
+        {
+          "heading": "Beni Ourain inspired designs",
+          "paragraphs": [
+            "The best-known Moroccan style takes its cue from Beni Ourain rugs: a creamy undyed-look wool ground with irregular dark diamond or lattice lines. The slightly uneven, hand-drawn quality of the pattern is what gives these rugs their warmth and character.",
+            "Other Moroccan-inspired designs add colour, from soft terracotta and rust to the bold palettes of Boucherouite and Azilal-style rugs."
+          ]
+        },
+        {
+          "heading": "Hand-knotted in wool, made to your size",
+          "paragraphs": [
+            "Our Moroccan style rugs are hand-knotted in wool by weavers in Bhadohi, India, with a plush pile that is soft underfoot. Because every rug is made to order, the size, pile height, colours and the scale of the pattern can all be adjusted to your room."
+          ]
+        },
+        {
+          "heading": "Where they work best",
+          "paragraphs": [
+            "Moroccan style rugs bring softness to living rooms and bedrooms and sit comfortably with timber, linen, leather and plain walls. An ivory ground lifts a darker floor, while a charcoal or colourful design grounds a pale, minimal room."
+          ]
+        }
+      ],
+      "faq": [
+        { "q": "What is a Beni Ourain style rug?", "a": "A rug inspired by the Beni Ourain tribes of Morocco: typically a thick, soft ivory wool pile with irregular dark diamond or lattice lines." },
+        { "q": "Are your Moroccan style rugs made in Morocco?", "a": "No. They are Moroccan-inspired designs hand-knotted in wool by our weavers in Bhadohi, India, and made to order in your size and colours." },
+        { "q": "Can I order a Moroccan style rug in a custom size?", "a": "Yes. Every rug is made to order, so we can weave it to your exact dimensions and adjust colours and pattern scale." }
+      ],
+      "rugSearch": "moroccan",
+      "rugsHeading": "Moroccan style rugs in our collection",
+      "cta": { "to": "/custom-rug-request", "label": "Request a Moroccan style rug in your size" }
+    },
+    {
+      "path": "/rug-manufacturer-india",
+      "seoTitle": "Rug Manufacturer in India: Bhadohi",
+      "description": "Handmade rug and carpet manufacturer in Bhadohi, India. Custom hand-knotted, hand-tufted and flatweave rugs for designers, retailers and hotels.",
+      "eyebrow": "Trade & wholesale",
+      "title": "Handmade Rug & Carpet Manufacturer in India",
+      "intro": "We make handmade rugs and carpets to order in Bhadohi, India's Carpet City, for interior designers, architects, retailers and hospitality projects around the world. Bring a design, a mood board or a size, and we will weave it.",
+      "sections": [
+        {
+          "heading": "What we make",
+          "paragraphs": [
+            "Hand-knotted rugs in wool and silk, including Indo-Tibetan knotting; hand-tufted rugs with plush, sculpted and high-low piles; and flatwoven rugs and dhurries in wool, cotton and jute. Designs range from traditional to modern, abstract and Moroccan-inspired."
+          ]
+        },
+        {
+          "heading": "Custom designs, colours and sizes",
+          "paragraphs": [
+            "Every rug is made to order. We work from your artwork, CAD file, reference image or one of our designs, match colours to Pantone or paint references and yarn samples, and weave to your exact dimensions, including round and irregular shapes."
+          ]
+        },
+        {
+          "heading": "How a trade project works",
+          "paragraphs": [
+            "Share your brief with sizes, quantities, materials and timeline. We confirm construction, pricing and production time, agree colours and design details with you before weaving, and keep you updated through production, finishing and inspection. Finished rugs are packed for shipping to your destination worldwide."
+          ]
+        },
+        {
+          "heading": "Direct from the workshop",
+          "paragraphs": [
+            "Working directly with the workshop means you talk to the people who make the rug: fewer hand-offs, clearer communication about colour and quality, and the flexibility to adapt a design to your project."
+          ]
+        }
+      ],
+      "faq": [
+        { "q": "Do you work with interior designers and retailers?", "a": "Yes. We make custom rugs for designers, architects, retailers and hospitality projects. Use the trade enquiry form to share your brief." },
+        { "q": "Can you produce our own designs?", "a": "Yes. Send your artwork, CAD file or reference images along with sizes and colours, and we will advise on the best construction and quote for it." },
+        { "q": "Do you ship internationally?", "a": "Yes, we ship worldwide. Shipping is confirmed with your quote based on the destination, size and quantity." }
+      ],
+      "cta": { "to": "/trade-enquiry", "label": "Start a trade enquiry" },
+      "links": [
+        { "to": "/project-gallery", "label": "See completed projects" },
+        { "to": "/guides/bhadohi-carpets", "label": "About Bhadohi carpets" },
+        { "to": "/colour-matching", "label": "Colour matching" }
+      ]
+    }
+  ]
+}

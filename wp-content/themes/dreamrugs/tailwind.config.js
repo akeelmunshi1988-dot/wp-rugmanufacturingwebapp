@@ -11,6 +11,15 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Product detail page showroom palette — same tokens as the original
+        // app's frontend/tailwind.config.js `showroom` colours.
+        showroom: {
+          ivory: '#F8F6F2',
+          gold: '#B2926D',
+          charcoal: '#211F1D',
+          grey: '#867B70',
+          border: '#E8E2DA',
+        },
         rug: {
           50: '#fdf8f0', 100: '#f9eedb', 200: '#f2d9b0', 300: '#e8be7d', 400: '#dca048',
           500: '#c8862a', 600: '#a86920', 700: '#86501c', 800: '#6e3f1c', 900: '#5c341b', 950: '#321a0a',

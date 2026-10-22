@@ -163,6 +163,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 				</div>
 			</template>
 
+			<template x-if="order.invoice_url">
+				<div>
+					<a :href="order.invoice_url" class="inline-flex items-center gap-2 border border-stone-200 hover:border-stone-500 text-stone-600 hover:text-stone-900 text-xs font-medium px-4 py-2 transition-colors uppercase tracking-wider"><?php dreamrugs_icon( 'download', 13 ); ?> Download Invoice</a>
+				</div>
+			</template>
+
 			<template x-if="loggedIn && cancellableStatuses.includes(order.status)">
 				<div class="flex flex-wrap items-center gap-3">
 					<button @click="openCancelModal(order)" class="flex items-center gap-2 border border-red-200 hover:border-red-400 text-red-500 hover:text-red-700 text-xs font-medium px-4 py-2 transition-colors uppercase tracking-wider">

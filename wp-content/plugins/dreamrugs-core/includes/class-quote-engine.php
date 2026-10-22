@@ -537,19 +537,22 @@ class DRC_Quote_Engine {
 		);
 	}
 
-	/** Mirrors _to_base(). Multi-currency conversion is likely being
-	 * dropped for this single-tenant, India-domestic storefront (see the
-	 * migration plan) — kept as a passthrough stub (no conversion applied)
-	 * rather than removed outright, so callers don't need to change if the
-	 * decision goes the other way later. */
+	/** Mirrors _to_base(): converts a material cost entered in another
+	 * currency into the store's base currency using the stored rates
+	 * (target units per 1 base unit — DRC_Settings 'exchange_rates', kept
+	 * fresh by DRC_Currency_Sync). Unknown rate → raw value, same as the
+	 * original. */
 	private static function to_base( float $amount, string $from_currency ): float {
 		$settings = DRC_Settings::all();
 		if ( ! $from_currency || $from_currency === $settings['currency'] ) {
 			return $amount;
 		}
-		// No stored exchange-rate table in the single-tenant settings model —
-		// same "unknown rate, use raw value" fallback as the original.
-		return $amount;
+		$rates     = (array) $settings['exchange_rates'];
+		$from_rate = isset( $rates[ $from_currency ] ) ? (float) $rates[ $from_currency ] : 0.0;
+		if ( $from_rate <= 0 ) {
+			return $amount;
+		}
+		return $amount / $from_rate;
 	}
 
 	/** Mirrors _estimate_days(). The $rush_order guard around the rush-timeline
@@ -678,7 +681,7 @@ class DRC_Quote_Engine {
 		return array(
 			'id'                  => $product_id,
 			'sizes'               => $sizes,
-			'base_price_currency' => get_woocommerce_currency(),
+			'base_price_currency' => DRC_Multi_Currency::base(),
 			'weave_type'          => $product->get_meta( '_drc_weave_type' ) ?: null,
 			'lead_time_days'      => $product->get_meta( '_drc_lead_time_days' ) ?: null,
 		);

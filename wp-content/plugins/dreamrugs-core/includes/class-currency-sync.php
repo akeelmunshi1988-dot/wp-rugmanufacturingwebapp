@@ -37,7 +37,7 @@ class DRC_Currency_Sync {
 	const SUPPORTED = array( 'USD', 'EUR', 'GBP', 'CAD', 'AUD', 'AED', 'SGD', 'CHF', 'SAR', 'QAR', 'JPY', 'NZD', 'ZAR', 'INR' );
 
 	public static function init() {
-		add_action( self::CRON_HOOK, array( __CLASS__, 'sync' ) );
+		add_action( self::CRON_HOOK, array( __CLASS__, 'scheduled_sync' ) );
 		add_action( 'init', array( __CLASS__, 'maybe_schedule' ) );
 	}
 
@@ -45,6 +45,16 @@ class DRC_Currency_Sync {
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time(), 'daily', self::CRON_HOOK );
 		}
+	}
+
+	/** The daily job — skipped when the vendor has switched rates to manual
+	 * (DRC_Settings 'exchange_rates_auto' = false), like the original's
+	 * Tenant.exchange_rates_auto. "Sync Now" always runs. */
+	public static function scheduled_sync() {
+		if ( ! DRC_Settings::get( 'exchange_rates_auto' ) ) {
+			return;
+		}
+		self::sync();
 	}
 
 	public static function unschedule() {
@@ -58,7 +68,7 @@ class DRC_Currency_Sync {
 	 * @return true|WP_Error
 	 */
 	public static function sync() {
-		$base = get_woocommerce_currency();
+		$base = DRC_Multi_Currency::base();
 
 		$response = wp_remote_get(
 			'https://open.er-api.com/v6/latest/' . rawurlencode( $base ),

@@ -24,7 +24,7 @@ class DRC_Catalog_Taxonomies {
 			'public'            => true,
 			'show_in_rest'      => true,
 			'show_admin_column' => true,
-			'rewrite'           => array( 'slug' => 'catalog/space' ),
+			'rewrite'           => array( 'slug' => 'collections/space' ),
 		) );
 
 		register_taxonomy( 'mood_tag', 'product', array(
@@ -33,7 +33,7 @@ class DRC_Catalog_Taxonomies {
 			'public'            => true,
 			'show_in_rest'      => true,
 			'show_admin_column' => true,
-			'rewrite'           => array( 'slug' => 'catalog/mood' ),
+			'rewrite'           => array( 'slug' => 'collections/mood' ),
 		) );
 
 		register_taxonomy( 'material_type', 'product', array(
@@ -42,7 +42,7 @@ class DRC_Catalog_Taxonomies {
 			'public'            => true,
 			'show_in_rest'      => true,
 			'show_admin_column' => true,
-			'rewrite'           => array( 'slug' => 'catalog/material' ),
+			'rewrite'           => array( 'slug' => 'collections/material' ),
 		) );
 	}
 }

@@ -1,0 +1,343 @@
+{
+  "_comment": "Copy for /weaves/<weave> and /collections/<facet>/<value>. Keys are '<facet>/<slugKey(value)>' (facet is weave|space|mood|material; slugKey lowercases and turns every non-alphanumeric run into '-', see src/data/collectionContent.ts). Read by WeaveTypePage.tsx, scripts/prerender.js and the backend sitemap (app/main.py) — only keys in 'pages' are indexed and listed in the sitemap. 'aliases' render another entry's copy but are noindex, so near-duplicate database values don't compete with the main page.",
+  "pages": {
+    "weave/hand-knotted": {
+      "name": "Hand Knotted",
+      "seoTitle": "Hand-Knotted Rugs & Carpets from India",
+      "seoDescription": "Hand-knotted wool and silk rugs, tied knot by knot by master weavers in Bhadohi, India. Heirloom carpets made to order in any size and colour.",
+      "eyebrow": "The pinnacle of rug craftsmanship",
+      "intro": "Every knot is tied individually by hand, creating heirloom rugs with exceptional definition, character, and longevity.",
+      "story": "A hand-knotted rug begins on a vertical loom, where an artisan ties thousands of individual knots around the foundation threads. The density and precision of those knots allow intricate patterns, nuanced colour transitions, and a surface that becomes more beautiful with age.",
+      "bestFor": "Living rooms, dining rooms, formal spaces, and collectors seeking a lasting investment.",
+      "character": "Detailed, durable and one of a kind",
+      "making": "Several months",
+      "care": "Vacuum gently and rotate periodically",
+      "faq": [
+        { "q": "How long does a hand-knotted rug last?", "a": "With normal care, a well-made hand-knotted wool rug lasts for decades and often becomes an heirloom. Each knot is tied around the rug's foundation threads, so the pile is part of the structure rather than glued to a backing." },
+        { "q": "Is there a difference between a hand-knotted rug and a hand-knotted carpet?", "a": "Not in how they are made. The words are used interchangeably; \"carpet\" is often used for larger or room-sized pieces and \"rug\" for a defined piece placed on the floor." },
+        { "q": "How long does it take to make a custom hand-knotted rug?", "a": "Usually several months, depending on size and knot density. We confirm the production time with your quote before weaving starts." },
+        { "q": "Can I order a hand-knotted rug in a custom size or colour?", "a": "Yes. Every rug is made to order, so the size, colours and design can all be set to suit your room." }
+      ]
+    },
+    "weave/hand-knotted-indo-tibetan": {
+      "name": "Indo-Tibetan Hand-Knotted",
+      "seoTitle": "Indo-Tibetan Hand-Knotted Rugs",
+      "seoDescription": "Indo-Tibetan rugs hand-knotted in India using the Tibetan knotting technique: dense, soft wool and silk pile for contemporary designs, made to order.",
+      "eyebrow": "A Himalayan knotting tradition, woven in India",
+      "intro": "Indo-Tibetan rugs are hand-knotted in India using the Tibetan technique, giving a dense, softly textured pile ideal for contemporary and abstract design.",
+      "story": "In Tibetan knotting, the weaver loops yarn around a rod across the width of the loom, then cuts the loops to form the pile. The method suits soft colour blends, painterly abstracts and tonal grounds, and pairs especially well with hand-spun wool and silk highlights.",
+      "bestFor": "Contemporary living rooms, bedrooms, offices, and design-led interiors.",
+      "character": "Soft, painterly and richly tactile",
+      "making": "Several months",
+      "care": "Vacuum gently without a beater bar; rotate periodically",
+      "faq": [
+        { "q": "What is an Indo-Tibetan rug?", "a": "A rug hand-knotted in India using the Tibetan knotting method, in which yarn is looped around a rod and then cut. It produces a dense pile that suits modern, abstract and tone-on-tone designs." },
+        { "q": "How is it different from other hand-knotted rugs?", "a": "The Tibetan knot favours bolder shapes and soft colour transitions, while finer Persian-style knotting is used for highly intricate traditional patterns. Both are fully hand-knotted and very durable." },
+        { "q": "Can Indo-Tibetan rugs combine wool and silk?", "a": "Yes. Silk is often knotted into a wool ground to highlight parts of the design with sheen and contrast." }
+      ]
+    },
+    "weave/hand-tufted": {
+      "name": "Hand Tufted",
+      "seoTitle": "Hand-Tufted Wool Rugs, Made to Order",
+      "seoDescription": "Hand-tufted wool rugs with a plush, sculpted pile, handmade in Bhadohi, India. Bold custom designs, shapes and sizes, made to order.",
+      "eyebrow": "Plush texture, shaped by hand",
+      "intro": "Yarn is placed into a stretched canvas by hand to build a soft, expressive pile with excellent design flexibility.",
+      "story": "Using a handheld tufting tool, artisans guide yarn through a canvas foundation before securing the reverse with a backing. This technique creates a dense, comfortable surface and makes bold shapes, sculpted details, and custom colour stories possible in less time than hand knotting.",
+      "bestFor": "Bedrooms, lounges, family rooms, and interiors that call for softness underfoot.",
+      "character": "Plush, versatile and richly textured",
+      "making": "Several weeks",
+      "care": "Vacuum without a beater bar",
+      "faq": [
+        { "q": "What is the difference between hand-tufted and hand-knotted rugs?", "a": "A hand-tufted rug is made by pushing yarn through a canvas with a hand tool and securing it with a backing, while a hand-knotted rug has every knot tied individually. Tufted rugs are quicker to make and more affordable; knotted rugs last longer." },
+        { "q": "Can hand-tufted rugs be made in custom shapes?", "a": "Yes. Tufting is well suited to round, irregular and sculpted designs, including carved or high-low pile patterns." },
+        { "q": "How should I clean a hand-tufted wool rug?", "a": "Vacuum regularly without a beater bar, blot spills straight away, and use a professional rug cleaner for deep cleaning." }
+      ]
+    },
+    "weave/flatweave": {
+      "name": "Flatweave",
+      "seoTitle": "Flatweave Rugs & Dhurries, Handwoven",
+      "seoDescription": "Handwoven flatweave rugs and dhurries in wool, cotton and jute from India. Slim, durable and often reversible, made to order in custom sizes.",
+      "eyebrow": "Lightweight, practical and reversible",
+      "intro": "Warp and weft threads are interlaced without a pile, producing a slim, durable rug with a crisp graphic quality.",
+      "story": "Flatweaves are made by passing horizontal weft yarns over and under vertical warp yarns. With no raised pile, they are easy to move, layer, and maintain. Their low profile works especially well beneath doors and dining furniture while showing geometric patterns with clarity.",
+      "bestFor": "Dining rooms, entryways, kitchens, layered rooms, and other high-traffic spaces.",
+      "character": "Light, crisp and often reversible",
+      "making": "Two to four weeks",
+      "care": "Vacuum regularly and use a rug pad",
+      "faq": [
+        { "q": "What is a dhurrie?", "a": "A dhurrie is a traditional Indian flatweave rug, woven on a loom without a pile. Dhurries are light, durable and often reversible." },
+        { "q": "Are flatweave rugs good for dining rooms?", "a": "Yes. With no pile, chairs slide easily and crumbs are simple to vacuum, which makes flatweaves a practical choice under dining tables." },
+        { "q": "Do flatweave rugs need a rug pad?", "a": "We recommend one. A pad stops the rug sliding on hard floors and adds cushioning underfoot." }
+      ]
+    },
+    "weave/machine-woven": {
+      "name": "Machine Woven",
+      "seoTitle": "Machine-Woven Rugs for Everyday Rooms",
+      "seoDescription": "Machine-woven rugs with consistent patterns and easy-care fibres: durable, practical rugs for busy homes, rentals and high-traffic spaces.",
+      "eyebrow": "Reliable performance for everyday rooms",
+      "intro": "Precision looms create consistent patterns and resilient surfaces that balance design, practicality, and accessible pricing.",
+      "story": "Computer-guided looms weave yarn at speed with even tension and repeatable detail. The construction is particularly suited to easy-care fibres and dependable everyday rugs, offering a broad range of styles with shorter production times.",
+      "bestFor": "Busy households, outdoor rooms, children’s spaces, rentals, and high-traffic areas.",
+      "character": "Consistent, resilient and easy-care",
+      "making": "Days to a few weeks",
+      "care": "Follow the fibre-specific care label"
+    },
+    "space/living-room": {
+      "name": "Living Room",
+      "seoTitle": "Living Room Rugs in Custom Sizes",
+      "seoDescription": "Handmade living room rugs and carpets in wool and silk, made to order in custom sizes to fit your seating plan. Hand-knotted and hand-tufted in India.",
+      "eyebrow": "The foundation of a room made for gathering",
+      "intro": "Living-room rugs anchor furniture, soften acoustics, and bring the colours of your most-used space together.",
+      "story": "The right living-room rug establishes the scale and mood of the entire room. A generous size lets the front legs of sofas and chairs sit comfortably on the rug, connecting separate pieces into one inviting conversation area while adding warmth and texture underfoot.",
+      "bestFor": "Conversation areas, family rooms, open-plan seating, and formal lounges.",
+      "character": "Grounded, welcoming and expressive",
+      "making": "Sized around your seating plan",
+      "care": "Rotate regularly for even wear",
+      "faq": [
+        { "q": "What size rug do I need for my living room?", "a": "Choose a rug large enough for at least the front legs of the sofa and chairs to sit on it. Because our rugs are made to order, we can size one exactly to your seating plan. See our rug size guide for common layouts." }
+      ]
+    },
+    "space/bedroom": {
+      "name": "Bedroom",
+      "seoTitle": "Bedroom Rugs, Handmade to Size",
+      "seoDescription": "Soft, handmade bedroom rugs and runners in wool and silk, custom-sized to your bed and room. Hand-knotted and hand-tufted in India, made to order.",
+      "eyebrow": "A softer beginning and end to every day",
+      "intro": "Bedroom rugs introduce quiet colour, warmth, and a comfortable landing beside and beneath the bed.",
+      "story": "A bedroom rug should feel calm and generous. Placed beneath the bed or as runners along either side, it frames the room’s focal point and gives bare feet a soft surface. Low-contrast patterns and tactile natural fibres support a restful atmosphere.",
+      "bestFor": "Primary bedrooms, guest rooms, children’s rooms, and bedside runners.",
+      "character": "Soft, restful and intimate",
+      "making": "Custom-sized to your bed",
+      "care": "Vacuum gently and rotate seasonally"
+    },
+    "space/dining-room": {
+      "name": "Dining Room",
+      "seoTitle": "Dining Room Rugs in Custom Sizes",
+      "seoDescription": "Durable handmade dining room rugs sized so chairs stay on the rug when pulled out. Low-pile wool and flatweave designs, made to order in India.",
+      "eyebrow": "Designed to frame every shared meal",
+      "intro": "Dining rugs define the table area and add comfort while standing up to moving chairs and everyday entertaining.",
+      "story": "For a balanced dining room, the rug should extend far enough beyond the table for chairs to remain on it when pulled out. Durable, lower-pile constructions make movement easy and help the dining setting read as one composed centrepiece.",
+      "bestFor": "Dining tables, breakfast areas, open-plan kitchens, and entertaining spaces.",
+      "character": "Structured, durable and convivial",
+      "making": "Proportioned to table and chairs",
+      "care": "Blot spills promptly; vacuum often"
+    },
+    "space/entryway": {
+      "name": "Entryway",
+      "seoTitle": "Entryway & Hallway Rugs and Runners",
+      "seoDescription": "Hard-wearing handmade entryway rugs and hallway runners, sized to clear your doors. Durable wool and flatweave constructions, made to order.",
+      "eyebrow": "A considered welcome from the first step",
+      "intro": "Entryway rugs set the tone for the home while handling concentrated foot traffic with confidence.",
+      "story": "An entrance rug introduces colour and craftsmanship at the threshold. A resilient construction, practical pile height, and well-fitted rug pad keep the surface secure and easy to maintain while protecting the floor beneath.",
+      "bestFor": "Foyers, hallways, doorways, vestibules, and transition spaces.",
+      "character": "Durable, welcoming and distinctive",
+      "making": "Fitted to clear doors and edges",
+      "care": "Shake out and vacuum frequently"
+    },
+    "space/study": {
+      "name": "Study",
+      "seoTitle": "Study & Home Office Rugs",
+      "seoDescription": "Handmade rugs for studies and home offices: low-pile wool and flatweave designs that let chairs roll easily and soften sound. Made to order in any size.",
+      "eyebrow": "Quiet warmth for focused work",
+      "intro": "A study rug softens sound, warms the floor, and gives a desk area a defined, comfortable footprint.",
+      "story": "In a study or home office, a lower, dense pile or a flatweave lets desk chairs move freely while still absorbing noise. Size the rug so the chair stays on it when pushed back, and choose calm, tonal designs that sit well with bookshelves and timber furniture.",
+      "bestFor": "Home offices, libraries, reading rooms, and workspaces.",
+      "character": "Calm, practical and sound-softening",
+      "making": "Sized to desk and chair",
+      "care": "Use a chair mat on high pile; vacuum regularly"
+    },
+    "mood/warm-earthy": {
+      "name": "Warm & Earthy",
+      "seoTitle": "Warm, Earthy & Neutral Rugs",
+      "seoDescription": "Handmade rugs in clay, sand, ochre and olive tones that pair with wood, linen and leather. Wool rugs from India, custom-made to your size.",
+      "eyebrow": "Natural tones with an instinctive sense of home",
+      "intro": "Clay, sand, ochre, olive, and warm neutrals create interiors that feel grounded and deeply comfortable.",
+      "story": "Warm and earthy rugs borrow their palette from soil, stone, timber, and sun-baked landscapes. Their organic colours pair naturally with wood, leather, linen, and handmade objects, adding depth without making a room feel overly formal.",
+      "bestFor": "Relaxed living rooms, natural-material interiors, and layered neutral schemes.",
+      "character": "Grounded, organic and comforting",
+      "making": "Built through layered natural colour",
+      "care": "Rotate to balance natural light exposure"
+    },
+    "mood/quiet-luxury": {
+      "name": "Quiet Luxury",
+      "seoTitle": "Luxury Rugs with Understated Design",
+      "seoDescription": "Luxury handmade rugs in fine wool and silk with subtle tonal colour and refined finishing. Hand-knotted in India and made to order.",
+      "eyebrow": "Refinement that reveals itself slowly",
+      "intro": "Subtle colour, exceptional fibres, and restrained detail create a lasting sense of understated refinement.",
+      "story": "Quiet luxury favours material quality over obvious ornament. Fine tonal shifts, considered texture, and beautifully finished edges allow these rugs to support an interior rather than dominate it, rewarding a closer look and ageing gracefully.",
+      "bestFor": "Serene bedrooms, elegant lounges, tailored interiors, and tonal schemes.",
+      "character": "Refined, tactile and understated",
+      "making": "Focused on fibre and finishing",
+      "care": "Use gentle suction and professional cleaning"
+    },
+    "mood/modern-minimal": {
+      "name": "Modern Minimal",
+      "seoTitle": "Modern & Minimalist Rugs",
+      "seoDescription": "Modern minimalist rugs with clean geometry, tonal texture and edited palettes. Handmade in wool and silk in India, custom-sized to your room.",
+      "eyebrow": "Clarity of form, texture, and proportion",
+      "intro": "Clean geometry and edited palettes bring warmth to modern rooms without interrupting their visual calm.",
+      "story": "Modern minimal rugs rely on proportion, negative space, and subtle surface variation. Simple does not mean plain: shifts in pile, hand-drawn lines, and quiet tonal contrast give the room depth while preserving an uncluttered architectural feeling.",
+      "bestFor": "Contemporary apartments, modern homes, studios, and streamlined offices.",
+      "character": "Clean, calm and architectural",
+      "making": "Precision-led and deliberately edited",
+      "care": "Vacuum regularly to preserve clean texture"
+    },
+    "mood/bohemian": {
+      "name": "Bohemian",
+      "seoTitle": "Bohemian Rugs, Handmade in India",
+      "seoDescription": "Bohemian rugs with expressive pattern, layered colour and artisan detail, handmade in India. Custom sizes for eclectic, collected interiors.",
+      "eyebrow": "Collected character with an easy spirit",
+      "intro": "Expressive pattern, tactile layers, and globally inspired colour make every bohemian room feel personal.",
+      "story": "Bohemian rugs embrace individuality through motifs, irregularities, and unexpected colour combinations. They work beautifully with vintage furniture, plants, art, and textiles, giving a layered room a unifying foundation without making it feel coordinated.",
+      "bestFor": "Creative homes, eclectic rooms, reading corners, and relaxed layered interiors.",
+      "character": "Free-spirited, layered and expressive",
+      "making": "Rich in pattern and artisan detail",
+      "care": "Rotate and vacuum gently"
+    },
+    "mood/bold-artistic": {
+      "name": "Bold & Artistic",
+      "seoTitle": "Bold Abstract & Art Rugs",
+      "seoDescription": "Bold abstract and art rugs with saturated colour and sculpted texture: statement pieces handmade in India and made to order in any size.",
+      "eyebrow": "A floor piece with the presence of art",
+      "intro": "Confident colour, expressive shapes, and unexpected composition turn the rug into the room’s focal point.",
+      "story": "Bold artistic rugs are designed to lead rather than follow. Abstract forms, saturated colour, and sculpted texture can define an otherwise restrained interior or join an already expressive collection of furniture and art.",
+      "bestFor": "Statement living rooms, creative studios, hospitality spaces, and art-led interiors.",
+      "character": "Expressive, vivid and individual",
+      "making": "Composed like an artwork",
+      "care": "Protect strong colours from direct sunlight"
+    },
+    "mood/timeless-traditional": {
+      "name": "Timeless Traditional",
+      "seoTitle": "Traditional Rugs & Oriental Carpets",
+      "seoDescription": "Traditional hand-knotted rugs and oriental-style carpets with medallions, borders and floral motifs, handmade in India in custom sizes.",
+      "eyebrow": "Patterns shaped by generations of craft",
+      "intro": "Classic medallions, borders, and botanical motifs bring history and enduring structure to a room.",
+      "story": "Traditional rugs use balanced layouts and established motifs to create a sense of permanence. Their layered palettes are remarkably versatile, complementing antiques and contemporary furniture alike while carrying the visual memory of historic weaving traditions.",
+      "bestFor": "Formal rooms, heritage homes, libraries, dining rooms, and collected interiors.",
+      "character": "Detailed, balanced and enduring",
+      "making": "Rooted in historic pattern language",
+      "care": "Rotate regularly and clean professionally"
+    },
+    "material/wool": {
+      "name": "Wool",
+      "seoTitle": "Wool Rugs & Handmade Wool Carpets",
+      "seoDescription": "Handmade wool rugs and carpets, hand-knotted and hand-tufted in India. Soft, resilient and naturally stain-resistant, made to order in any size.",
+      "eyebrow": "Naturally resilient, warm, and beautifully tactile",
+      "intro": "Wool is the enduring rug fibre: soft underfoot, resilient in daily use, and rich in natural texture.",
+      "story": "Wool fibres have a natural crimp that helps a rug recover from footsteps and furniture. They accept dye beautifully, resist soiling, and provide warmth and acoustic comfort, making wool an exceptionally versatile choice for handcrafted rugs.",
+      "bestFor": "Living rooms, bedrooms, dining rooms, and hardworking family spaces.",
+      "character": "Soft, resilient and naturally insulating",
+      "making": "Suited to every artisan construction",
+      "care": "Vacuum gently; blot spills immediately",
+      "faq": [
+        { "q": "Are wool rugs good for high-traffic areas?", "a": "Yes. Wool's natural crimp helps the pile spring back after footsteps, and its lanolin helps resist soiling, so wool is one of the most durable rug fibres." },
+        { "q": "Do new wool rugs shed?", "a": "Some shedding of loose fibres is normal for the first few weeks of a new handmade wool rug and reduces with regular vacuuming." },
+        { "q": "How do I clean a wool rug?", "a": "Vacuum regularly without a beater bar, blot spills immediately with a clean cloth, and have the rug professionally cleaned every year or two." }
+      ]
+    },
+    "material/new-zealand-wool": {
+      "name": "New Zealand Wool",
+      "seoTitle": "New Zealand Wool Rugs, Handmade",
+      "seoDescription": "Handmade rugs in New Zealand wool, prized for long, bright, resilient fibres. Hand-knotted and hand-tufted in India, made to order in any size.",
+      "eyebrow": "Bright, long-staple wool with lasting spring",
+      "intro": "New Zealand wool is valued for its long, strong fibres, natural brightness, and the clear colour it takes in dyeing.",
+      "story": "The long staple of New Zealand wool spins into a smooth, even yarn with good resilience, helping the pile recover after use. Its natural whiteness makes clean, true colours possible, from crisp pale grounds to saturated accents.",
+      "bestFor": "Living rooms, bedrooms, and pale or light-coloured designs.",
+      "character": "Bright, smooth and resilient",
+      "making": "Suited to hand-knotted and hand-tufted rugs",
+      "care": "Vacuum gently; blot spills immediately",
+      "faq": [
+        { "q": "Why choose New Zealand wool for a rug?", "a": "New Zealand wool has long, strong fibres and natural brightness, so it dyes to clear colours and makes a resilient, even pile." },
+        { "q": "Is New Zealand wool softer than other wool?", "a": "It is usually smoother and more even than coarser carpet wools, though softness also depends on the yarn, the pile height and how the rug is finished." }
+      ]
+    },
+    "material/silk": {
+      "name": "Silk",
+      "seoTitle": "Silk Rugs, Hand-Knotted in India",
+      "seoDescription": "Hand-knotted silk rugs with fluid sheen and fine detail, made by master weavers in India. Luxury silk carpets made to order in custom sizes.",
+      "eyebrow": "Luminous detail with exceptional finesse",
+      "intro": "Silk brings fluid softness, fine pattern definition, and a distinctive sheen that changes with the light.",
+      "story": "The smooth surface of silk reflects light in different directions, giving a rug remarkable visual movement. Its fine fibres allow artisans to achieve intricate detail and subtle colour, making silk rugs especially suited to considered, lower-traffic interiors.",
+      "bestFor": "Formal lounges, primary bedrooms, dressing rooms, and collectible statement pieces.",
+      "character": "Lustrous, refined and finely detailed",
+      "making": "Slow, precise and highly skilled",
+      "care": "Professional specialist cleaning only"
+    },
+    "material/wool-silk": {
+      "name": "Wool & Silk",
+      "seoTitle": "Wool & Silk Rugs, Hand-Knotted",
+      "seoDescription": "Hand-knotted wool and silk rugs: a durable wool pile with silk highlights that catch the light. Handmade in India, made to order in any size.",
+      "eyebrow": "Wool’s strength, lit by silk",
+      "intro": "Wool and silk rugs combine a hard-wearing wool ground with silk accents that add sheen and fine definition.",
+      "story": "Silk is knotted into chosen parts of the design so that motifs, outlines and tonal shifts catch the light, while the surrounding wool gives the rug body, resilience and warmth. The contrast in texture makes patterns read with depth from every angle.",
+      "bestFor": "Living rooms, bedrooms, and statement pieces in moderate-traffic rooms.",
+      "character": "Textured, luminous and durable",
+      "making": "Several months, hand-knotted",
+      "care": "Vacuum gently; professional cleaning only",
+      "faq": [
+        { "q": "Are wool and silk rugs durable?", "a": "Yes. The wool pile carries most of the wear, while the silk adds sheen and detail. They suit living rooms and bedrooms well; very high-traffic hallways are better served by all-wool rugs." },
+        { "q": "How should a wool and silk rug be cleaned?", "a": "Vacuum gently without a beater bar and use a professional rug cleaner, as silk is sensitive to harsh chemicals and over-wetting." }
+      ]
+    },
+    "material/wool-bamboo-silk": {
+      "name": "Wool & Bamboo Silk",
+      "seoTitle": "Wool & Bamboo Silk Rugs",
+      "seoDescription": "Handmade wool and bamboo silk rugs: soft wool with high-sheen bamboo silk highlights, a more affordable alternative to pure silk. Made to order in India.",
+      "eyebrow": "Silk-like lustre at an accessible price",
+      "intro": "Bamboo silk is a viscose fibre made from bamboo cellulose, adding a silk-like sheen to a wool rug for less than pure silk.",
+      "story": "Paired with wool, bamboo silk highlights pattern and colour with a bright, reflective lustre. The wool provides structure and resilience, while the bamboo silk gives the rug a luxurious finish that shifts with the light.",
+      "bestFor": "Bedrooms, lounges, and lower-traffic living spaces.",
+      "character": "Lustrous, soft and refined",
+      "making": "Hand-knotted or hand-tufted",
+      "care": "Keep dry; blot spills and clean professionally",
+      "faq": [
+        { "q": "What is bamboo silk?", "a": "Bamboo silk is a viscose (rayon) fibre made from bamboo cellulose. It is not true silk, but it has a similar sheen and soft hand at a lower price." },
+        { "q": "Can bamboo silk rugs get wet?", "a": "Viscose fibres weaken and can mark when wet, so blot spills immediately, avoid wet areas, and use a professional cleaner." }
+      ]
+    },
+    "material/cotton": {
+      "name": "Cotton",
+      "seoTitle": "Cotton Rugs & Dhurries",
+      "seoDescription": "Handwoven cotton rugs and dhurries from India: light, breathable and easy to live with. Made to order in custom sizes and colours.",
+      "eyebrow": "Relaxed comfort with everyday versatility",
+      "intro": "Cotton offers a lighter hand, clear colour, and an easygoing character for casual contemporary rooms.",
+      "story": "Cotton yarn creates rugs that feel breathable and approachable. It is particularly effective in flatwoven and low-profile constructions, where its softness and colour clarity support practical, informal interiors.",
+      "bestFor": "Bedrooms, kitchens, children’s rooms, casual lounges, and layered spaces.",
+      "character": "Light, soft and easygoing",
+      "making": "Ideal for nimble, versatile weaves",
+      "care": "Follow the individual cleaning label"
+    },
+    "material/jute": {
+      "name": "Jute",
+      "seoTitle": "Jute Rugs, Handwoven Natural Fibre",
+      "seoDescription": "Handwoven jute rugs in natural, earthy textures from India. Sustainable plant-fibre rugs for relaxed, layered rooms, made to order in custom sizes.",
+      "eyebrow": "Natural fibre with an organic, woven texture",
+      "intro": "Jute is a soft, golden plant fibre that brings natural texture and a relaxed, organic feel to a room.",
+      "story": "Spun from the stalks of the jute plant, the fibre is woven into chunky braids, flatweaves and loop textures. It is renewable and biodegradable, and its warm, honeyed tones make an easy base for layering a patterned rug on top.",
+      "bestFor": "Living rooms, bedrooms, and lower-traffic spaces with a natural, coastal or rustic style.",
+      "character": "Natural, textured and earthy",
+      "making": "Handwoven, typically a few weeks",
+      "care": "Keep dry; vacuum and blot spills immediately",
+      "faq": [
+        { "q": "Are jute rugs durable?", "a": "Jute is comfortable underfoot and suits living rooms and bedrooms, but it is softer and less hard-wearing than sisal or wool, so it is better kept out of very high-traffic or damp areas." },
+        { "q": "Can jute rugs get wet?", "a": "Jute absorbs moisture and can stain or weaken if left wet. Blot spills quickly and avoid bathrooms, kitchens near the sink, and outdoor use." }
+      ]
+    },
+    "material/synthetic": {
+      "name": "Synthetic",
+      "seoTitle": "Synthetic & Easy-Care Rugs",
+      "seoDescription": "Durable synthetic rugs in performance fibres that resist stains, fading and moisture. Practical rugs for busy homes, made to order in custom sizes.",
+      "eyebrow": "Practical performance for life in motion",
+      "intro": "Modern performance fibres offer colour stability, easy maintenance, and dependable durability for busy spaces.",
+      "story": "Purpose-made synthetic yarns can resist moisture, stains, fading, and intensive wear. They make considered rug design accessible in spaces where practicality is essential, including outdoor rooms and active family homes.",
+      "bestFor": "Patios, playrooms, high-traffic areas, pet-friendly homes, and hospitality use.",
+      "character": "Durable, practical and easy-care",
+      "making": "Consistent and efficient",
+      "care": "Clean according to the specific fibre label"
+    }
+  },
+  "aliases": {
+    "weave/hand-woven-flat-weave": "weave/flatweave",
+    "material/handspun-new-zealand-wool": "material/new-zealand-wool",
+    "material/wool-viscose-silk": "material/wool-bamboo-silk"
+  }
+}

@@ -21,6 +21,9 @@ class DRC_Rest_Routes {
 
 	const NS = 'dreamrugs/v1';
 
+	// Same cap as customer.py's MAX_REVIEW_REQUESTS.
+	const MAX_REVIEW_REQUESTS = 5;
+
 	public static function register() {
 		// Mirrors GET /customer/materials — a minimal public id/name list so
 		// the custom-rug-request form's Material Preference dropdown reflects
@@ -190,6 +193,10 @@ class DRC_Rest_Routes {
 	// ── Handlers ────────────────────────────────────────────────────────
 
 	public static function estimate( WP_REST_Request $request ) {
+		$guard = DRC_Security::guard( $request, 'estimate', array( array( 60, 60 ) ), false ); // same bucket/limits as the original
+		if ( is_wp_error( $guard ) ) {
+			return $guard;
+		}
 		$product_id  = (int) $request->get_param( 'product_id' );
 		$size_w      = (float) $request->get_param( 'size_w' );
 		$size_h      = (float) $request->get_param( 'size_h' );
@@ -221,6 +228,10 @@ class DRC_Rest_Routes {
 	 * handles both cases in a single table.
 	 */
 	public static function create_quote( WP_REST_Request $request ) {
+		$guard = DRC_Security::guard( $request, 'request_quote', array( array( 10, HOUR_IN_SECONDS ), array( 30, DAY_IN_SECONDS ) ), true ); // same bucket/limits as the original
+		if ( is_wp_error( $guard ) ) {
+			return $guard;
+		}
 		global $wpdb;
 		$table = $wpdb->prefix . 'drc_quotes';
 
@@ -239,19 +250,35 @@ class DRC_Rest_Routes {
 			}
 		}
 
+		// The quotes table has no phone/company columns (the original kept them
+		// on its Customer row), so a guest's contact details ride along in the
+		// notes the vendor reads rather than being dropped.
+		$notes = sanitize_textarea_field( $request->get_param( 'notes' ) ?: '' );
+		if ( ! $user_id ) {
+			$contact = array_filter( array(
+				$request->get_param( 'phone' ) ? 'Phone: ' . sanitize_text_field( $request->get_param( 'phone' ) ) : '',
+				$request->get_param( 'company' ) ? 'Company: ' . sanitize_text_field( $request->get_param( 'company' ) ) : '',
+			) );
+			if ( $contact ) {
+				$notes = trim( implode( ' | ', $contact ) . ( '' !== $notes ? "\n\n" . $notes : '' ) );
+			}
+		}
+
 		$data = array(
 			'customer_user_id'         => $user_id ?: null,
 			'guest_name'               => $user_id ? null : sanitize_text_field( $request->get_param( 'name' ) ),
 			'guest_email'              => $user_id ? null : sanitize_email( $request->get_param( 'email' ) ),
 			'product_id'               => $product_id,
+			// Metres, like the original Quote.custom_size_w/h — clients convert
+			// ft/cm before sending (see rug-detail.js / custom-rug-request.js).
 			'custom_size_w'            => $request->get_param( 'size_w' ) ? (float) $request->get_param( 'size_w' ) : null,
 			'custom_size_h'            => $request->get_param( 'size_h' ) ? (float) $request->get_param( 'size_h' ) : null,
 			'rug_shape'                => $request->get_param( 'shape' ) ?: 'rect',
-			'qty'                      => (int) ( $request->get_param( 'qty' ) ?: 1 ),
+			'qty'                      => max( 1, (int) ( $request->get_param( 'qty' ) ?: 1 ) ),
 			'rush_order'               => (bool) $request->get_param( 'rush_order' ) ? 1 : 0,
 			'selected_color'           => '' !== $selected_color ? $selected_color : null,
 			'status'                   => 'draft',
-			'notes'                    => sanitize_textarea_field( $request->get_param( 'notes' ) ?: '' ),
+			'notes'                    => $notes,
 			'is_custom_request'        => $request->get_param( 'is_custom_request' ) ? 1 : 0,
 			'room_type'                => sanitize_text_field( $request->get_param( 'room_type' ) ?: '' ),
 			'material_preference'      => sanitize_text_field( $request->get_param( 'material_preference' ) ?: '' ),
@@ -262,15 +289,75 @@ class DRC_Rest_Routes {
 			'created_at'               => current_time( 'mysql' ),
 		);
 
-		if ( ! $user_id && ( ! $data['guest_name'] || ! $data['guest_email'] ) ) {
-			return new WP_Error( 'drc_missing_contact', 'Name and email are required.', array( 'status' => 400 ) );
+		if ( ! $user_id && ( ! $data['guest_name'] || ! is_email( $data['guest_email'] ) ) ) {
+			return new WP_Error( 'drc_missing_contact', 'Name and a valid email are required.', array( 'status' => 400 ) );
+		}
+
+		$is_catalog_quote = $product_id && ! $data['is_custom_request'];
+		$rug              = $is_catalog_quote ? DRC_Quote_Engine::get_rug_for_pricing( $product_id ) : null;
+		if ( $is_catalog_quote && ! $rug ) {
+			return new WP_Error( 'drc_not_found', 'Rug not found.', array( 'status' => 404 ) );
+		}
+
+		if ( $is_catalog_quote ) {
+			// Mirrors customer.py request_quote()'s dedup: an identical open
+			// quote from the same customer is returned instead of duplicated.
+			$owner_sql = $user_id
+				? $wpdb->prepare( 'customer_user_id = %d', $user_id )
+				: $wpdb->prepare( 'customer_user_id IS NULL AND guest_email = %s', $data['guest_email'] );
+			$existing  = $wpdb->get_row( $wpdb->prepare(
+				"SELECT id, final_price, expected_delivery_days FROM {$table} WHERE {$owner_sql}
+				 AND product_id = %d AND ABS(custom_size_w - %f) < 0.0001 AND ABS(custom_size_h - %f) < 0.0001
+				 AND qty = %d AND rush_order = %d AND COALESCE(selected_color, '') = %s AND status IN ('draft', 'sent')",
+				$product_id, (float) $data['custom_size_w'], (float) $data['custom_size_h'],
+				$data['qty'], $data['rush_order'], (string) $data['selected_color']
+			), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $owner_sql was built with prepare() above.
+			if ( $existing ) {
+				return new WP_REST_Response( array(
+					'quote_id'       => (int) $existing['id'],
+					'final_price'    => null !== $existing['final_price'] ? (float) $existing['final_price'] : null,
+					'lead_time_days' => null !== $existing['expected_delivery_days'] ? (int) $existing['expected_delivery_days'] : null,
+					'message'        => 'You already have an open quote for this rug and size.',
+				), 200 );
+			}
+
+			// Price it now, like the original: the vendor reviews a priced
+			// quote rather than starting from nothing. A pricing error (e.g.
+			// no material set on the product) still saves the request
+			// unpriced — the original did the same via calc.get() → None.
+			$material_id         = (int) get_post_meta( $product_id, '_drc_material_id', true );
+			$data['material_id'] = $material_id ?: null;
+			if ( $material_id && $data['custom_size_w'] && $data['custom_size_h'] ) {
+				$engine = new DRC_Quote_Engine();
+				$calc   = $engine->calculate_quote( $rug, (float) $data['custom_size_w'], (float) $data['custom_size_h'], $material_id, $data['qty'], (bool) $data['rush_order'], null, null, null, $data['rug_shape'] );
+				if ( ! isset( $calc['error'] ) ) {
+					$data['base_price']             = $calc['subtotal'] ?? null;
+					$data['final_price']            = $calc['final_price'] ?? null;
+					$data['price_currency']         = $calc['price_currency'] ?? null;
+					$data['margin_pct']             = $calc['profit_margin_pct'] ?? null;
+					$data['gst_pct']                = $calc['gst_pct'] ?? null;
+					$data['expected_delivery_days'] = isset( $calc['estimated_days'] ) ? (int) $calc['estimated_days'] : null;
+				}
+			}
+			if ( empty( $data['expected_delivery_days'] ) ) {
+				$data['expected_delivery_days'] = (int) ( $rug['lead_time_days'] ?: 21 );
+			}
 		}
 
 		$inserted = $wpdb->insert( $table, $data );
 		if ( ! $inserted ) {
 			return new WP_Error( 'drc_insert_failed', 'Could not save the quote request.', array( 'status' => 500 ) );
 		}
-		return new WP_REST_Response( array( 'quote_id' => $wpdb->insert_id ), 201 );
+		$new_id = $wpdb->insert_id;
+		if ( $is_catalog_quote ) {
+			DRC_Quote_Context::notify_vendor_quote_request( DRC_Quote_Context::quote_row( $new_id ) );
+		}
+		return new WP_REST_Response( array(
+			'quote_id'       => $new_id,
+			'final_price'    => $data['final_price'] ?? null,
+			'lead_time_days' => $data['expected_delivery_days'] ?? null,
+			'message'        => 'Your quote request has been received. Our team will contact you shortly to confirm details.',
+		), 201 );
 	}
 
 	/**
@@ -290,6 +377,9 @@ class DRC_Rest_Routes {
 		$date_from   = $request->get_param( 'date_from' );
 		$date_to     = $request->get_param( 'date_to' );
 
+		// Quotes made as a guest with this account's email are theirs too
+		// (the original merged by email in My Quotes).
+		self::claim_guest_quotes( $user_id, wp_get_current_user()->user_email );
 		$where  = array( $wpdb->prepare( 'customer_user_id = %d', $user_id ) );
 		if ( $status && 'all' !== $status ) {
 			$where[] = $wpdb->prepare( 'status = %s', $status );
@@ -342,9 +432,24 @@ class DRC_Rest_Routes {
 			}
 		}
 		$settings = DRC_Settings::all();
+		$final    = null !== $q['final_price'] ? (float) $q['final_price'] : null;
+		$gst_pct  = null !== $q['gst_pct'] ? (float) $q['gst_pct'] : null;
+		$shipping = null !== $q['shipping_cost'] ? (float) $q['shipping_cost'] : 0.0;
+		$pre_gst  = null;
+		$gst_amt  = null;
+		if ( null !== $final && $gst_pct ) {
+			// GST is inside the canonical final_price; shipping sits after it.
+			$taxable = $final - $shipping;
+			$pre_gst = round( $taxable / ( 1 + $gst_pct / 100 ), 2 );
+			$gst_amt = round( $taxable - $pre_gst, 2 );
+		}
 
 		return array(
 			'quote_id'                => (int) $q['id'],
+			'size_display'            => ( $q['custom_size_w'] && $q['custom_size_h'] ) ? DRC_Quote_Context::size_display( $q ) : null,
+			'rug_shape'               => $q['rug_shape'] ?: 'rect',
+			'shipping_cost'           => $shipping ?: null,
+			'expected_delivery'       => $q['expected_delivery'] ?: null,
 			'status'                  => $q['status'],
 			'rug_name'                => $rug_name,
 			'rug_image_url'           => $rug_image,
@@ -354,10 +459,10 @@ class DRC_Rest_Routes {
 			'size_h'                  => $q['custom_size_h'] !== null ? (float) $q['custom_size_h'] : null,
 			'base_price'              => $q['base_price'] !== null ? (float) $q['base_price'] : null,
 			'final_price'             => $q['final_price'] !== null ? (float) $q['final_price'] : null,
-			'pre_gst_price'           => null,
-			'gst_amount'              => null,
-			'gst_pct'                 => $q['gst_pct'] !== null ? (float) $q['gst_pct'] : null,
-			'gst_inclusive'           => false,
+			'pre_gst_price'           => $pre_gst,
+			'gst_amount'              => $gst_amt,
+			'gst_pct'                 => $gst_pct,
+			'gst_inclusive'           => (bool) $settings['gst_inclusive'],
 			'price_currency'          => $q['price_currency'] ?: $settings['currency'],
 			'rush_order'              => (bool) $q['rush_order'],
 			'selected_color'          => $q['selected_color'] ?: null,
@@ -386,8 +491,9 @@ class DRC_Rest_Routes {
 	 *   - accept refuses if an order already exists for the quote
 	 *   - negotiate resets status to "draft" (routes back through the
 	 *     vendor's normal review screen, no separate negotiation queue)
-	 *   - request-review only valid when status === "sent", increments
-	 *     review_request_count rather than changing status
+	 *   - request-review only valid when status === "draft" (still with
+	 *     the vendor), capped at MAX_REVIEW_REQUESTS, increments
+	 *     review_request_count rather than changing status, emails vendor
 	 *   - "accept" itself only updates status here; WooCommerce order
 	 *     creation from an accepted quote is Phase 6 (checkout) work.
 	 */
@@ -403,7 +509,13 @@ class DRC_Rest_Routes {
 			return new WP_Error( 'drc_not_found', 'Quote not found.', array( 'status' => 404 ) );
 		}
 		if ( (int) $quote['customer_user_id'] !== get_current_user_id() ) {
-			return new WP_Error( 'drc_forbidden', 'This quote does not belong to you.', array( 'status' => 403 ) );
+			$me = wp_get_current_user();
+			$is_my_guest_quote = ! $quote['customer_user_id'] && $quote['guest_email'] && $me->user_email && 0 === strcasecmp( $quote['guest_email'], $me->user_email );
+			if ( ! $is_my_guest_quote ) {
+				return new WP_Error( 'drc_forbidden', 'This quote does not belong to you.', array( 'status' => 403 ) );
+			}
+			self::claim_guest_quotes( $me->ID, $me->user_email );
+			$quote['customer_user_id'] = $me->ID;
 		}
 
 		if ( in_array( $action, array( 'accept', 'reject', 'negotiate' ), true ) && $quote['status'] !== 'sent' ) {
@@ -415,11 +527,16 @@ class DRC_Rest_Routes {
 				if ( ! empty( $quote['wc_order_id'] ) ) {
 					return new WP_Error( 'drc_already_ordered', 'An order already exists for this quote.', array( 'status' => 409 ) );
 				}
-				$order = DRC_Order_Creator::create_from_quote( $quote );
+				$order = DRC_Order_Creator::create_from_quote( $quote, sanitize_text_field( (string) $request->get_param( 'promo_code' ) ) );
 				if ( is_wp_error( $order ) ) {
 					return new WP_Error( 'drc_order_creation_failed', $order->get_error_message(), array( 'status' => 400 ) );
 				}
-				$wpdb->update( $table, array( 'status' => 'accepted' ), array( 'id' => $quote_id ) );
+				$accept_update = array( 'status' => 'accepted' );
+				$accept_notes  = sanitize_textarea_field( (string) $request->get_param( 'notes' ) );
+				if ( '' !== $accept_notes ) {
+					$accept_update['customer_response_notes'] = $accept_notes;
+				}
+				$wpdb->update( $table, $accept_update, array( 'id' => $quote_id ) );
 				// The frontend redirects the customer straight to paying for
 				// THIS order, not the generic cart-based checkout (which
 				// would checkout whatever's in their cart, not this quote).
@@ -463,12 +580,17 @@ class DRC_Rest_Routes {
 				break;
 
 			case 'request-review':
-				if ( $quote['status'] !== 'sent' ) {
-					return new WP_Error( 'drc_invalid_state', 'This quote is not awaiting your response.', array( 'status' => 409 ) );
+				// Mirrors customer.py request_review(): a nudge for a quote
+				// still with the vendor (draft), capped, and emailed to them.
+				if ( 'draft' !== $quote['status'] ) {
+					return new WP_Error( 'drc_invalid_state', 'Review can only be requested while the quote is under review.', array( 'status' => 400 ) );
 				}
-				$wpdb->update( $table, array(
-					'review_request_count' => (int) $quote['review_request_count'] + 1,
-				), array( 'id' => $quote_id ) );
+				$count = (int) $quote['review_request_count'];
+				if ( $count >= self::MAX_REVIEW_REQUESTS ) {
+					return new WP_Error( 'drc_review_limit', sprintf( 'Maximum of %d review requests reached for this quote.', self::MAX_REVIEW_REQUESTS ), array( 'status' => 400 ) );
+				}
+				$wpdb->update( $table, array( 'review_request_count' => $count + 1 ), array( 'id' => $quote_id ) );
+				self::notify_vendor_review_request( $quote, $count + 1 );
 				break;
 		}
 
@@ -480,11 +602,80 @@ class DRC_Rest_Routes {
 		return new WP_REST_Response( $response, 200 );
 	}
 
+	/** Links guest quotes (guest_email = the account email) to the account.
+	 * Runs on registration/sign-in (see init hooks) and lazily from My Quotes. */
+	public static function claim_guest_quotes( int $user_id, ?string $email ): void {
+		global $wpdb;
+		if ( ! $user_id || ! $email ) {
+			return;
+		}
+		$wpdb->query( $wpdb->prepare(
+			"UPDATE {$wpdb->prefix}drc_quotes SET customer_user_id = %d, guest_name = NULL, guest_email = NULL WHERE customer_user_id IS NULL AND guest_email = %s",
+			$user_id,
+			$email
+		) );
+	}
+
+	public static function claim_on_login( $user_login, $user ) {
+		if ( $user instanceof WP_User ) {
+			self::claim_guest_quotes( $user->ID, $user->user_email );
+		}
+	}
+
+	public static function claim_on_register( $user_id ) {
+		$user = get_userdata( $user_id );
+		if ( $user ) {
+			self::claim_guest_quotes( $user->ID, $user->user_email );
+		}
+	}
+
+	/** Best-effort vendor email for a customer's "please review my quote"
+	 * nudge — same recipient fallback as the enquiry notifications. */
+	private static function notify_vendor_review_request( array $quote, int $request_number ): void {
+		$c = DRC_Quote_Context::customer( $quote );
+		DRC_Email_Templates::send(
+			'vendor_review_request',
+			DRC_Email_Templates::vendor_recipient(),
+			array(
+				'customer_name'  => $c['name'],
+				'customer_email' => $c['email'],
+				'quote_id'       => (int) $quote['id'],
+				'rug_name'       => DRC_Quote_Context::rug_name( $quote ),
+				'size'           => DRC_Quote_Context::size_display( $quote ),
+				'status'         => $quote['status'],
+				'request_num'    => $request_number,
+				'max_requests'   => self::MAX_REVIEW_REQUESTS,
+			),
+			array(),
+			$c['email'] ? array( 'Reply-To: ' . $c['email'] ) : array()
+		);
+	}
+
 	/** Proxies to the room-visualizer sidecar service over the Docker-internal
 	 * network — see room-visualizer/main.py. */
 	public static function room_preview( WP_REST_Request $request ) {
-		$rug_image_url = $request->get_param( 'rug_image_url' );
-		$opacity       = $request->get_param( 'opacity' ) ?: '0.90';
+		$guard = DRC_Security::rate_limit( 'room_preview', array( array( 60, 600 ) ) );
+		if ( is_wp_error( $guard ) ) {
+			return $guard;
+		}
+		// The original took a rug id; an arbitrary URL would let anyone use
+		// the visualizer as a fetch proxy. Accept a product id, or an image
+		// hosted on this site.
+		$rug_image_url = null;
+		if ( $request->get_param( 'rug_id' ) ) {
+			$product       = wc_get_product( (int) $request->get_param( 'rug_id' ) );
+			$rug_image_url = $product ? wp_get_attachment_image_url( $product->get_image_id(), 'large' ) : null;
+			if ( ! $rug_image_url ) {
+				return new WP_Error( 'drc_not_found', 'Rug not found.', array( 'status' => 404 ) );
+			}
+		} elseif ( $request->get_param( 'rug_image_url' ) ) {
+			$candidate = esc_url_raw( (string) $request->get_param( 'rug_image_url' ) );
+			if ( wp_parse_url( $candidate, PHP_URL_HOST ) !== wp_parse_url( home_url(), PHP_URL_HOST ) ) {
+				return new WP_Error( 'drc_bad_image', 'Only this store\'s rug images can be previewed.', array( 'status' => 400 ) );
+			}
+			$rug_image_url = $candidate;
+		}
+		$opacity = max( 0.3, min( 1.0, (float) ( $request->get_param( 'opacity' ) ?: 0.9 ) ) );
 		$base_url      = defined( 'DRC_ROOM_VISUALIZER_URL' ) ? DRC_ROOM_VISUALIZER_URL : 'http://room-visualizer:8100';
 
 		if ( ! $rug_image_url ) {
@@ -514,6 +705,10 @@ class DRC_Rest_Routes {
 	 * list for now; a dedicated table/CPT is Phase 7 (CMS content types) work
 	 * if the subscriber list grows large enough to need real querying. */
 	public static function newsletter_subscribe( WP_REST_Request $request ) {
+		$guard = DRC_Security::guard( $request, 'newsletter', array( array( 5, HOUR_IN_SECONDS ) ), true ); // same bucket/limits as the original
+		if ( is_wp_error( $guard ) ) {
+			return $guard;
+		}
 		$email = sanitize_email( $request->get_param( 'email' ) );
 		if ( ! $email || ! is_email( $email ) ) {
 			return new WP_Error( 'drc_invalid_email', 'A valid email is required.', array( 'status' => 400 ) );
@@ -545,6 +740,10 @@ class DRC_Rest_Routes {
 	 * best-effort email the vendor — a delivery failure never fails the
 	 * request, matching the original's try/except-and-continue behavior. */
 	public static function create_trade_enquiry( WP_REST_Request $request ) {
+		$guard = DRC_Security::guard( $request, 'trade_enquiry', array( array( 5, HOUR_IN_SECONDS ), array( 20, DAY_IN_SECONDS ) ), true ); // same bucket/limits as the original
+		if ( is_wp_error( $guard ) ) {
+			return $guard;
+		}
 		$required = array( 'first_name', 'last_name', 'email', 'phone', 'profession', 'company', 'project_brief' );
 		$fields   = array();
 		foreach ( $required as $key ) {
@@ -581,29 +780,34 @@ class DRC_Rest_Routes {
 	}
 
 	private static function notify_vendor_trade_enquiry( array $fields ): void {
-		$to = DRC_Settings::get( 'vendor_notification_email' ) ?: get_option( 'admin_email' );
-		if ( ! $to ) {
-			return;
-		}
-		$subject = sprintf( 'New trade enquiry from %s %s (%s)', $fields['first_name'], $fields['last_name'], $fields['company'] );
-		$body    = "A new trade partner enquiry was submitted:\n\n"
-			. "Name: {$fields['first_name']} {$fields['last_name']}\n"
-			. "Email: {$fields['email']}\n"
-			. "Phone: {$fields['phone']}\n"
-			. "Profession: {$fields['profession']}\n"
-			. "Company: {$fields['company']}\n"
-			. ( $fields['website'] ? "Website: {$fields['website']}\n" : '' )
-			. ( $fields['city'] || $fields['country'] ? 'Location: ' . trim( $fields['city'] . ' ' . $fields['country'] ) . "\n" : '' )
-			. ( $fields['project_type'] ? "Project type: {$fields['project_type']}\n" : '' )
-			. "\nProject brief:\n{$fields['project_brief']}\n\n"
-			. 'View it in wp-admin under DreamRugs → Trade Enquiries.';
-		wp_mail( $to, $subject, $body, array( 'Reply-To: ' . $fields['email'] ) );
+		DRC_Email_Templates::send(
+			'vendor_trade_enquiry',
+			DRC_Email_Templates::vendor_recipient(),
+			array(
+				'customer_name'  => trim( $fields['first_name'] . ' ' . $fields['last_name'] ),
+				'customer_email' => $fields['email'],
+				'customer_phone' => $fields['phone'],
+				'profession'     => $fields['profession'],
+				'company'        => $fields['company'],
+				'website'        => $fields['website'] ?: '—',
+				'city'           => $fields['city'] ?: '—',
+				'country'        => $fields['country'] ?: '—',
+				'project_type'   => $fields['project_type'] ?: '—',
+				'project_brief'  => $fields['project_brief'],
+			),
+			array(),
+			array( 'Reply-To: ' . $fields['email'] )
+		);
 	}
 
 	/** Mirrors POST /customer/homepage-enquiries: validate (consent required,
 	 * matching the original's 422 on missing consent), store as a
 	 * drc_homepage_enquiry post, then best-effort email the vendor. */
 	public static function create_homepage_enquiry( WP_REST_Request $request ) {
+		$guard = DRC_Security::guard( $request, 'homepage_enquiry', array( array( 5, HOUR_IN_SECONDS ), array( 20, DAY_IN_SECONDS ) ), true ); // same bucket/limits as the original
+		if ( is_wp_error( $guard ) ) {
+			return $guard;
+		}
 		if ( ! $request->get_param( 'consent' ) ) {
 			return new WP_Error( 'drc_consent_required', 'Consent is required before sending an enquiry.', array( 'status' => 422 ) );
 		}
@@ -639,34 +843,33 @@ class DRC_Rest_Routes {
 	}
 
 	private static function notify_vendor_homepage_enquiry( array $fields ): void {
-		$to = DRC_Settings::get( 'vendor_notification_email' ) ?: get_option( 'admin_email' );
-		if ( ! $to ) {
-			return;
-		}
-		$subject = sprintf( 'New homepage enquiry from %s: %s', $fields['name'], $fields['subject'] );
-		$body    = "A new homepage contact-form enquiry was submitted:\n\n"
-			. "Name: {$fields['name']}\n"
-			. "Email: {$fields['email']}\n"
-			. "Subject: {$fields['subject']}\n\n"
-			. "Message:\n{$fields['message']}\n\n"
-			. 'View it in wp-admin under DreamRugs → Homepage Enquiries.';
-		wp_mail( $to, $subject, $body, array( 'Reply-To: ' . $fields['email'] ) );
+		DRC_Email_Templates::send(
+			'vendor_homepage_enquiry',
+			DRC_Email_Templates::vendor_recipient(),
+			array(
+				'customer_name'       => $fields['name'],
+				'customer_email'      => $fields['email'],
+				'customer_phone_line' => ! empty( $fields['phone'] ) ? ', ' . $fields['phone'] : '',
+				'message'             => ( $fields['subject'] ? 'Subject: ' . $fields['subject'] . "\n\n" : '' ) . $fields['message'],
+			),
+			array(),
+			array( 'Reply-To: ' . $fields['email'] )
+		);
 	}
 
 	/**
-	 * Ported from CurrencyContext.tsx — a display-only currency converter.
-	 * base_currency is WooCommerce's own real transactional currency
-	 * (get_woocommerce_currency()); the customer is always actually charged
-	 * in that currency at checkout regardless of what this lets the
-	 * storefront *show* them. exchange_rates gives "how many units of each
-	 * currency equal 1 unit of base_currency", same semantics as the
-	 * original's Tenant.exchange_rates dict.
+	 * Ported from CurrencyContext.tsx. base_currency is WooCommerce's store
+	 * currency. On product pages the switcher only converts what's shown;
+	 * on the cart and checkout DRC_Multi_Currency prices and charges in the
+	 * chosen currency (when it's chargeable and has a rate).
+	 * exchange_rates gives "how many units of each currency equal 1 unit of
+	 * base_currency", same semantics as the original's Tenant.exchange_rates.
 	 */
 	public static function currency_config() {
 		$settings = DRC_Settings::all();
 		return new WP_REST_Response( array(
-			'base_currency'    => get_woocommerce_currency(),
-			'default_currency' => $settings['currency'] ?: get_woocommerce_currency(),
+			'base_currency'    => DRC_Multi_Currency::base(),
+			'default_currency' => DRC_Multi_Currency::base(),
 			'exchange_rates'   => (object) ( $settings['exchange_rates'] ?: array() ),
 			'currencies'       => array(
 				array( 'code' => 'INR', 'label' => 'Indian Rupee (₹)', 'symbol' => '₹' ),
@@ -872,17 +1075,52 @@ class DRC_Rest_Routes {
 			'billing_phone'       => sanitize_text_field( (string) $request->get_param( 'phone' ) ),
 			'billing_company'     => sanitize_text_field( (string) $request->get_param( 'company' ) ),
 			'billing_address_1'   => sanitize_text_field( (string) $request->get_param( 'address' ) ),
-			'billing_country'     => sanitize_text_field( (string) ( $request->get_param( 'country' ) ?: 'India' ) ),
+			// WooCommerce keys countries/states by code; the original stored
+			// the country name and a GST state code ("09").
+			'billing_country'     => self::country_code( (string) ( $request->get_param( 'country' ) ?: 'India' ) ),
+
 			'drc_gstin'           => sanitize_text_field( (string) $request->get_param( 'gstin' ) ),
 			'drc_state_code'      => sanitize_text_field( (string) $request->get_param( 'state_code' ) ),
 			'drc_account_type'    => sanitize_text_field( (string) ( $request->get_param( 'account_type' ) ?: 'retail' ) ),
 			'drc_is_export_buyer' => $request->get_param( 'is_export_buyer' ) ? '1' : '0',
 		);
+		if ( 'IN' === $meta['billing_country'] ) {
+			$meta['billing_state'] = (string) ( array_flip( DRC_Quote_Context::WC_STATE_TO_GST )[ (string) $request->get_param( 'state_code' ) ] ?? '' );
+		}
+		// Accounts the original hadn't verified yet still need the email
+		// link (DRC_Customer_Accounts); social-login accounts were verified
+		// by the provider.
+		if ( null !== $request->get_param( 'is_verified' ) ) {
+			$meta['drc_email_verified'] = ( $request->get_param( 'is_verified' ) || $request->get_param( 'oauth_provider' ) ) ? '1' : '0';
+		}
 		foreach ( $meta as $k => $v ) {
 			update_user_meta( $user_id, $k, $v );
 		}
+		// Guest quotes placed under this email before the account existed.
+		self::claim_guest_quotes( (int) $user_id, $email );
 
 		return new WP_REST_Response( array( 'user_id' => (int) $user_id ), 201 );
+	}
+
+	/** "India" / "india" / "IN" → "IN"; unknown names pass through unchanged. */
+	public static function country_code( string $country ): string {
+		$country = trim( $country );
+		if ( ! function_exists( 'WC' ) || '' === $country ) {
+			return $country;
+		}
+		$all = WC()->countries->get_countries();
+		if ( isset( $all[ strtoupper( $country ) ] ) ) {
+			return strtoupper( $country );
+		}
+		foreach ( $all as $code => $name ) {
+			// WooCommerce labels some as "United States (US)".
+			$name = trim( preg_replace( '/\s*\([A-Z]{2}\)$/', '', html_entity_decode( $name ) ) );
+			if ( 0 === strcasecmp( $name, $country ) ) {
+				return $code;
+			}
+		}
+		$aliases = array( 'usa' => 'US', 'united states of america' => 'US', 'uk' => 'GB', 'england' => 'GB', 'uae' => 'AE' );
+		return $aliases[ strtolower( $country ) ] ?? $country;
 	}
 
 	/**
@@ -943,6 +1181,9 @@ class DRC_Rest_Routes {
 				}
 				$item->set_subtotal( (float) ( $li['total'] ?? 0 ) );
 				$item->set_total( (float) ( $li['total'] ?? 0 ) );
+				if ( ! empty( $li['quote_id'] ) ) {
+					$item->add_meta_data( '_drc_quote_id', absint( $li['quote_id'] ), true );
+				}
 				$order->add_item( $item );
 			}
 		} else {
@@ -958,9 +1199,44 @@ class DRC_Rest_Routes {
 			$order->set_shipping_address_1( $shipping_address );
 		}
 
+		// Billing contact — guests included, so My Orders / order tracking /
+		// the "register with the same email" claim all find the order.
+		$billing_name = trim( (string) $request->get_param( 'billing_name' ) );
+		$name_parts   = preg_split( '/\s+/', $billing_name, 2 );
+		$order->set_billing_first_name( sanitize_text_field( $name_parts[0] ?? '' ) );
+		$order->set_billing_last_name( sanitize_text_field( $name_parts[1] ?? '' ) );
+		$billing_email = sanitize_email( (string) $request->get_param( 'billing_email' ) );
+		if ( is_email( $billing_email ) ) {
+			$order->set_billing_email( $billing_email );
+		}
+		$order->set_billing_phone( sanitize_text_field( (string) $request->get_param( 'billing_phone' ) ) );
+		$order->set_billing_company( sanitize_text_field( (string) $request->get_param( 'billing_company' ) ) );
+		if ( $request->get_param( 'billing_country' ) ) {
+			$code = self::country_code( (string) $request->get_param( 'billing_country' ) );
+			$order->set_billing_country( $code );
+			$order->set_shipping_country( $code );
+		}
+		$state = array_flip( DRC_Quote_Context::WC_STATE_TO_GST )[ (string) $request->get_param( 'state_code' ) ] ?? '';
+		if ( $state && 'IN' === $order->get_billing_country() ) {
+			$order->set_billing_state( $state );
+		}
+		if ( $request->get_param( 'gstin' ) ) {
+			$order->update_meta_data( '_billing_gstin', strtoupper( sanitize_text_field( (string) $request->get_param( 'gstin' ) ) ) );
+		}
+
+		// Razorpay payment.
+		$payment_id = sanitize_text_field( (string) $request->get_param( 'transaction_id' ) );
+		if ( $payment_id ) {
+			$order->set_transaction_id( $payment_id );
+			$order->set_payment_method( 'razorpay' );
+			$order->set_payment_method_title( 'Razorpay' );
+		}
+
 		$order->set_created_via( 'drc-migration' );
+		// The original's own statuses (in_production, quality_check, shipped,
+		// delivered) exist here too (DRC_Order_Statuses).
 		$status = sanitize_key( (string) $request->get_param( 'status' ) ) ?: 'processing';
-		$order->set_status( $status );
+		$order->set_status( array_key_exists( 'wc-' . $status, wc_get_order_statuses() ) ? $status : 'processing' );
 
 		// Persist line items/calc first, THEN overwrite the total — order
 		// matters, calculate_totals() would clobber set_total().
@@ -977,6 +1253,12 @@ class DRC_Rest_Routes {
 			'_drc_gst_sgst'        => $request->get_param( 'sgst' ),
 			'_drc_gst_igst'        => $request->get_param( 'igst' ),
 			'_drc_legacy_invoice_number' => $request->get_param( 'invoice_number' ),
+			'_drc_estimated_delivery' => $request->get_param( 'estimated_delivery' ) ? gmdate( 'Y-m-d', strtotime( (string) $request->get_param( 'estimated_delivery' ) ) ) : null,
+			'_drc_actual_delivery'    => $request->get_param( 'actual_delivery' ) ? gmdate( 'Y-m-d', strtotime( (string) $request->get_param( 'actual_delivery' ) ) ) : null,
+			'_drc_refund_id'          => $request->get_param( 'refund_id' ),
+			'_drc_refund_status'      => $request->get_param( 'refund_status' ),
+			'_drc_refund_amount'      => $request->get_param( 'refund_amount' ),
+			'_drc_refunded_at'        => $request->get_param( 'refunded_at' ),
 		) as $k => $v ) {
 			if ( $v !== null && $v !== '' ) {
 				$order->update_meta_data( $k, is_scalar( $v ) ? sanitize_text_field( (string) $v ) : $v );
@@ -988,8 +1270,21 @@ class DRC_Rest_Routes {
 		$created_at = $request->get_param( 'created_at' );
 		if ( $created_at ) {
 			$order->set_date_created( strtotime( $created_at ) );
-			$order->save();
+			if ( $payment_id ) {
+				$order->set_date_paid( strtotime( $created_at ) );
+			}
 		}
+
+		// Link the imported quotes (wp_drc_quotes ids) both ways, like a
+		// checkout does: order → first quote, quote → order.
+		$quote_ids = array_values( array_filter( array_map( 'absint', (array) $request->get_param( 'quote_ids' ) ) ) );
+		if ( $quote_ids ) {
+			global $wpdb;
+			$order->update_meta_data( '_drc_quote_id', $quote_ids[0] );
+			$in = implode( ',', $quote_ids );
+			$wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->prefix}drc_quotes SET wc_order_id = %d WHERE id IN ({$in})", $order->get_id() ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- $in is absint()-ed ids.
+		}
+		$order->save();
 
 		return new WP_REST_Response( array( 'order_id' => $order->get_id(), 'total' => $order->get_total() ), 201 );
 	}
@@ -1007,7 +1302,14 @@ class DRC_Rest_Routes {
 	 * on disk under its original name.
 	 */
 	public static function upload_custom_rug_request_image( WP_REST_Request $request ) {
+		$guard = DRC_Security::guard( $request, 'custom_rug_upload', array( array( 20, 600 ) ), false ); // same bucket/limits as the original
+		if ( is_wp_error( $guard ) ) {
+			return $guard;
+		}
 		$files = $request->get_file_params();
+		if ( ! empty( $files['file'] ) && in_array( $files['file']['error'], array( UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE ), true ) ) {
+			return new WP_Error( 'drc_too_large', 'File too large. Max 10MB allowed.', array( 'status' => 400 ) );
+		}
 		if ( empty( $files['file'] ) || UPLOAD_ERR_OK !== $files['file']['error'] ) {
 			return new WP_Error( 'drc_no_file', 'No file uploaded.', array( 'status' => 400 ) );
 		}
@@ -1044,6 +1346,10 @@ class DRC_Rest_Routes {
 	 * existing convention for guest vs. logged-in ownership.
 	 */
 	public static function submit_custom_rug_request( WP_REST_Request $request ) {
+		$guard = DRC_Security::guard( $request, 'custom_rug_request', array( array( 10, HOUR_IN_SECONDS ), array( 30, DAY_IN_SECONDS ) ), true ); // same bucket/limits as the original
+		if ( is_wp_error( $guard ) ) {
+			return $guard;
+		}
 		global $wpdb;
 		$table = $wpdb->prefix . 'drc_quotes';
 
@@ -1095,12 +1401,31 @@ class DRC_Rest_Routes {
 			$quote_ids[] = $wpdb->insert_id;
 		}
 
-		$admin_email = get_option( 'admin_email' );
-		if ( $admin_email ) {
-			wp_mail(
-				$admin_email,
-				sprintf( 'New custom rug request from %s', $name ?: $email ),
-				sprintf( "%s (%s) submitted %d custom rug request(s).\n\nReview in wp-admin: %s", $name ?: 'A customer', $email ?: 'no email given', count( $quote_ids ), admin_url( 'admin.php?page=dreamrugs-quotes' ) )
+		// One vendor email per rug, like the original's
+		// _notify_vendor_custom_rug_request(), to the vendor address.
+		$phone = sanitize_text_field( (string) $request->get_param( 'phone' ) );
+		foreach ( $quote_ids as $qid ) {
+			$q = DRC_Quote_Context::quote_row( $qid );
+			$c = DRC_Quote_Context::customer( $q );
+			$images = $q['reference_image_urls'] ? (array) json_decode( $q['reference_image_urls'], true ) : array();
+			DRC_Email_Templates::send(
+				'vendor_custom_rug_request',
+				DRC_Email_Templates::vendor_recipient(),
+				array(
+					'customer_name'       => $c['name'],
+					'customer_email'      => $c['email'],
+					'customer_phone_line' => ( $phone ?: $c['phone'] ) ? ', ' . ( $phone ?: $c['phone'] ) : '',
+					'room_type'           => $q['room_type'] ?: '—',
+					'size'                => DRC_Quote_Context::size_display( $q ),
+					'qty'                 => (int) $q['qty'],
+					'material_preference' => $q['material_preference'] ?: '—',
+					'budget_range'        => $q['budget_range'] ?: '—',
+					'notes_line'          => $q['notes'] ? 'Notes: ' . $q['notes'] . "\n" : '',
+					'images_line'         => $images ? 'Reference images: ' . implode( ', ', $images ) . "\n" : '',
+					'quote_id'            => $qid,
+				),
+				array(),
+				$c['email'] ? array( 'Reply-To: ' . $c['email'] ) : array()
 			);
 		}
 

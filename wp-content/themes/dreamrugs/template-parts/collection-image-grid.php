@@ -12,6 +12,10 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+// Only a complete, vendor-curated set renders — never a partial grid.
+if ( empty( $drc_grid_images ) || count( $drc_grid_images ) < 3 ) {
+	return;
+}
 ?>
 <section class="overflow-hidden bg-[#0b1217] text-white">
 	<div class="mx-auto w-[94vw] px-4 pt-10 pb-10 md:pt-16 md:pb-16">

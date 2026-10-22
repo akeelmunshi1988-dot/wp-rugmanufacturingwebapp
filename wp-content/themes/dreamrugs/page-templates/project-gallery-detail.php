@@ -13,6 +13,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 $project_id = (int) get_query_var( DRC_Project_Gallery_Routes::QUERY_VAR );
 $project    = DRC_Content_Types::get_gallery_item( $project_id );
 
+if ( $project ) {
+	dreamrugs_seo( array(
+		'title'       => $project['caption'] ?: 'Rugs in Their New Homes',
+		'description' => $project['description'] ?: 'A completed rug project, in the customer’s own home.',
+		'canonical'   => home_url( '/project-gallery/' . $project['id'] . '/' ),
+	) );
+	// Share image for this project (the original passed image= to <SEO>).
+	add_filter( 'rank_math/opengraph/facebook/image', function () use ( $project ) { return $project['image_url']; } );
+	add_action( 'wp_head', function () use ( $project ) {
+		if ( ! did_action( 'rank_math/head' ) ) {
+			echo '<meta property="og:image" content="' . esc_url( $project['image_url'] ) . '">' . "\n";
+		}
+	}, 6 );
+} else {
+	status_header( 404 );
+	dreamrugs_seo( array( 'title' => 'Project Not Found', 'noindex' => true ) );
+}
+
 get_header();
 
 if ( ! $project ) :
@@ -33,7 +51,7 @@ $gallery_images = array_merge(
 );
 ?>
 
-<div class="w-[94vw] max-w-none mx-auto px-4 py-10 space-y-8" x-data="{ expandedSrc: null, expandedAlt: '' }">
+<div class="w-[94vw] max-w-none mx-auto px-4 py-10 space-y-8" x-data="{ expandedSrc: null, expandedAlt: '' }" @keydown.escape.window="expandedSrc = null">
 	<div class="flex items-center gap-2 text-xs text-stone-400">
 		<a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="hover:text-stone-900 transition-colors">Home</a>
 		<?php dreamrugs_icon( 'chevron-right', 11 ); ?>
@@ -49,13 +67,14 @@ $gallery_images = array_merge(
 		</div>
 	<?php endif; ?>
 
-	<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+	<?php // Each photo keeps its own proportions (ProjectDetail.tsx) — no cropping. ?>
+	<div class="grid grid-cols-1 sm:grid-cols-2 items-start gap-4">
 		<?php foreach ( $gallery_images as $i => $img ) :
 			$alt = $project['caption'] ?: ( 'Project photo ' . ( $i + 1 ) );
 			?>
 			<button type="button" @click="expandedSrc = '<?php echo esc_js( $img['image_url'] ); ?>'; expandedAlt = '<?php echo esc_js( $alt ); ?>'"
-				class="relative bg-stone-100 overflow-hidden aspect-[4/3] <?php echo 0 === $i ? 'sm:col-span-2 sm:aspect-[21/9]' : ''; ?> cursor-zoom-in group">
-				<img src="<?php echo esc_url( $img['image_url'] ); ?>" alt="<?php echo esc_attr( $alt ); ?>" class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700" loading="<?php echo 0 === $i ? 'eager' : 'lazy'; ?>" />
+				class="relative w-full bg-stone-100 <?php echo 0 === $i ? 'sm:col-span-2' : ''; ?> cursor-zoom-in">
+				<img src="<?php echo esc_url( $img['image_url'] ); ?>" alt="<?php echo esc_attr( $alt ); ?>" class="block w-full h-auto" loading="<?php echo 0 === $i ? 'eager' : 'lazy'; ?>" />
 			</button>
 		<?php endforeach; ?>
 	</div>

@@ -66,7 +66,10 @@
 		document.querySelectorAll( '.drc-price' ).forEach( function ( el ) {
 			var amount = parseFloat( el.dataset.drcAmount );
 			if ( isNaN( amount ) ) return;
-			var rate = getConversionRate( config.base_currency, currency, config.base_currency, config.exchange_rates );
+			// The amount's own currency: the store base, or — on a cart/checkout
+			// being charged in another currency — that currency.
+			var from = el.dataset.drcCurrency || config.base_currency;
+			var rate = getConversionRate( from, currency, config.base_currency, config.exchange_rates );
 			var converted = amount * rate;
 			// A nonzero amount that would round away to "0" at 0 decimal places
 			// (e.g. a small INR price converted into a stronger currency) still
@@ -84,12 +87,14 @@
 		var disclaimer = document.getElementById( 'drc-currency-disclaimer' );
 		var orderTotal = document.getElementById( 'drc-order-total' );
 		if ( disclaimer && orderTotal ) {
-			if ( currency === config.base_currency ) {
+			var totalSpan = orderTotal.querySelector( '.drc-price' );
+			var chargeCurrency = ( totalSpan && totalSpan.dataset.drcCurrency ) || config.base_currency;
+			if ( currency === chargeCurrency ) {
 				disclaimer.style.display = 'none';
 			} else {
-				var amount = parseFloat( ( orderTotal.querySelector( '.drc-price' ) || {} ).dataset && orderTotal.querySelector( '.drc-price' ).dataset.drcAmount );
+				var amount = parseFloat( totalSpan && totalSpan.dataset.drcAmount );
 				if ( ! isNaN( amount ) ) {
-					disclaimer.textContent = 'Converted estimate — you will be charged ' + fmt( amount, config.base_currency, 2 ) + ' (' + config.base_currency + ') via UPI/Bank Transfer.';
+					disclaimer.textContent = 'Converted estimate — you will be charged ' + fmt( amount, chargeCurrency, 2 ) + ' (' + chargeCurrency + ').';
 					disclaimer.style.display = '';
 				}
 			}
@@ -97,39 +102,78 @@
 	}
 
 	document.addEventListener( 'DOMContentLoaded', function () {
-		var select = document.getElementById( 'drc-currency-select' );
 		var cfg = window.drcCurrencyConfig || { base_currency: 'INR', default_currency: 'INR', exchange_rates: {} };
+
+		// Same rule as DRC_Multi_Currency::selected(): the store currency, or an
+		// enabled currency with a known exchange rate — anything else would be
+		// displayed in one currency but charged in another.
+		function allowed( code ) {
+			if ( ! code ) return false;
+			if ( code === cfg.base_currency ) return true;
+			if ( cfg.currencies && cfg.currencies.length && cfg.currencies.indexOf( code ) === -1 ) return false;
+			return ( cfg.exchange_rates || {} )[ code ] > 0;
+		}
+
+		// No currency switcher (like the original storefront): the currency is
+		// picked automatically — a signed-in customer's country, else the
+		// guest's geolocated country (async, below), else the browser locale,
+		// else the store default. A choice saved by the old header dropdown
+		// can no longer be changed, so it's dropped.
+		try { localStorage.removeItem( STORAGE_KEY ); } catch ( e ) {}
+		var fromCustomer = cfg.customer_country ? REGION_TO_CURRENCY[ cfg.customer_country.toUpperCase() ] : null;
+		var cachedGeo = null; // this session's IP lookup ('' = unknown), see below
+		try { cachedGeo = sessionStorage.getItem( 'drc_geo_country' ); } catch ( e ) {}
+		var fromGeo = cachedGeo ? REGION_TO_CURRENCY[ cachedGeo ] : null;
+		var initial = [ fromCustomer, fromGeo, detectCurrencyFromLocale(), cfg.default_currency ].filter( allowed )[ 0 ] || cfg.base_currency || 'INR';
 
 		// Exposed so other scripts that swap in fresh server-rendered
 		// `.drc-price` markup after page load (e.g. assets/cart.js's AJAX
-		// quantity-stepper refresh) can re-run the conversion on the new
-		// elements, rather than those elements sitting unconverted until the
-		// visitor happens to touch the currency dropdown again.
+		// quantity-stepper refresh) can re-run the conversion on it.
 		window.drcCurrency = {
-			reapply: function () {
-				applyCurrency( select ? select.value : ( localStorage.getItem( STORAGE_KEY ) || cfg.default_currency || 'INR' ), cfg );
-			},
+			reapply: function () { applyCurrency( initial, cfg ); },
 		};
 
-		var initial = localStorage.getItem( STORAGE_KEY ) || detectCurrencyFromLocale() || cfg.default_currency || 'INR';
-		if ( select ) {
-			select.value = initial;
-			// The requested locale/stored currency might not be one of the 14
-			// options actually rendered — fall back to the store default rather
-			// than leaving the <select> on its first option unintentionally.
-			if ( select.value !== initial ) {
-				select.value = cfg.default_currency || 'INR';
-				initial = select.value;
-			}
+		// The server reads this cookie to price and charge the cart/checkout
+		// in the same currency (DRC_Multi_Currency).
+		function setChargeCookie( code ) {
+			document.cookie = STORAGE_KEY + '=' + encodeURIComponent( code ) + ';path=/;max-age=31536000;SameSite=Lax';
+		}
+		var onCartOrCheckout = document.body.classList.contains( 'woocommerce-cart' ) || ( document.body.classList.contains( 'woocommerce-checkout' ) && ! document.body.classList.contains( 'woocommerce-order-pay' ) && ! document.body.classList.contains( 'woocommerce-order-received' ) );
+		var hadCookie = document.cookie.split( '; ' ).some( function ( c ) { return c === STORAGE_KEY + '=' + initial; } );
+		setChargeCookie( initial );
+		// The cart/checkout was priced before the cookie matched: reload once
+		// into the right currency.
+		var reloadedOnce = false;
+		try { reloadedOnce = '1' === sessionStorage.getItem( 'drc_currency_reloaded' ); } catch ( e ) { reloadedOnce = true; }
+		if ( onCartOrCheckout && ! hadCookie && ! reloadedOnce ) {
+			try { sessionStorage.setItem( 'drc_currency_reloaded', '1' ); } catch ( e ) {}
+			window.location.reload();
+			return;
 		}
 
 		applyCurrency( initial, cfg );
 
-		if ( select ) {
-			select.addEventListener( 'change', function () {
-				localStorage.setItem( STORAGE_KEY, select.value );
-				applyCurrency( select.value, cfg );
-			} );
+		// Guests: refine the locale guess with an IP lookup (once per session).
+		if ( ! fromCustomer && null === cachedGeo && cfg.root ) {
+			var useCountry = function ( code, canReload ) {
+				var geoCurrency = code ? REGION_TO_CURRENCY[ code ] : null;
+				if ( ! allowed( geoCurrency ) || geoCurrency === initial ) return;
+				initial = geoCurrency;
+				setChargeCookie( geoCurrency );
+				// Reload to re-price the cart — only when the result is remembered,
+				// otherwise the next load would look it up and reload again.
+				if ( onCartOrCheckout && canReload ) { window.location.reload(); return; }
+				applyCurrency( geoCurrency, cfg );
+			};
+			fetch( cfg.root + '/customer/detect-country' )
+				.then( function ( r ) { return r.ok ? r.json() : {}; } )
+				.then( function ( data ) {
+					var code = ( data && data.country_code ) || '';
+					var stored = true;
+					try { sessionStorage.setItem( 'drc_geo_country', code ); } catch ( e ) { stored = false; }
+					useCountry( code, stored );
+				} )
+				.catch( function () {} );
 		}
 
 		// Fetch live exchange rates (the inline config only carries what was
@@ -142,7 +186,7 @@
 				.then( function ( data ) {
 					cfg.base_currency = data.base_currency || cfg.base_currency;
 					cfg.exchange_rates = data.exchange_rates || cfg.exchange_rates;
-					applyCurrency( select ? select.value : initial, cfg );
+					applyCurrency( initial, cfg );
 				} )
 				.catch( function () {} );
 		}

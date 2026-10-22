@@ -160,3 +160,20 @@ body.admin-bar .top-\[102px\] { top: 134px !important; }
   border-color: theme('colors.stone.200');
   border-radius: 0;
 }
+
+/* Product detail page image swap / section reveal, and the back-to-top rug.
+   Only applied through Tailwind's motion-safe: variant, so reduced-motion
+   visitors never see it (same as the original app's index.css). */
+@keyframes showroom-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* WooCommerce's `.woocommerce img { height: auto }` (specificity 0,1,1) beats
+   Tailwind's .h-full (0,1,0), so full-height images on product pages — the
+   gallery, thumbnails, workshop photos, related-rug cards — collapsed to their
+   natural height. Restore h-full's meaning there. */
+.woocommerce img.h-full,
+.woocommerce-page img.h-full {
+  height: 100%;
+}

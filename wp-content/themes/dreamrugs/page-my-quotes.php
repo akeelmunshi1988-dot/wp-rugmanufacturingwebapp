@@ -21,7 +21,7 @@ if ( ! is_user_logged_in() ) :
 			<?php dreamrugs_icon( 'file-text', 32, 'text-stone-300 mx-auto' ); ?>
 			<h2 class="storefront-heading text-2xl">Sign in to view your quotes</h2>
 			<p class="text-stone-400 text-sm">Log in or create an account to see quotes sent to you by our team.</p>
-			<a href="<?php echo esc_url( wp_login_url( home_url( '/my-quotes' ) ) ); ?>" class="w-full storefront-cta-solid py-3.5 transition-colors flex items-center justify-center gap-2"><?php dreamrugs_icon( 'log-in', 13 ); ?> Sign In</a>
+			<a href="<?php echo esc_url( dreamrugs_login_url( home_url( '/my-quotes/' ) ) ); ?>" class="w-full storefront-cta-solid py-3.5 transition-colors flex items-center justify-center gap-2"><?php dreamrugs_icon( 'log-in', 13 ); ?> Sign In</a>
 		</div>
 	</div>
 	<?php
@@ -103,7 +103,7 @@ endif;
 			</div>
 		</template>
 
-		<template x-for="quote in quotes" :key="quote.quote_id">
+		<template x-for="quote in shownQuotes()" :key="quote.quote_id">
 			<div class="border transition-colors" :class="quote.status === 'sent' ? 'border-blue-200' : 'border-stone-200'">
 				<button @click="quote.expanded = !quote.expanded" class="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-stone-50 transition-colors">
 					<template x-if="quote.rug_image_url"><img :src="quote.rug_image_url" :alt="quote.rug_name" class="w-12 h-12 object-cover flex-shrink-0" /></template>
@@ -124,10 +124,54 @@ endif;
 
 				<div x-show="quote.expanded" x-cloak class="border-t border-stone-100 px-5 py-5 space-y-4 bg-white">
 					<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+						<div><p class="text-stone-400 text-xs uppercase tracking-widest mb-1">Size</p><p class="text-stone-900 text-sm" x-text="quote.size_display || '—'"></p></div>
 						<div><p class="text-stone-400 text-xs uppercase tracking-widest mb-1">Qty</p><p class="text-stone-900 text-sm" x-text="quote.qty + ' pc' + (quote.qty !== 1 ? 's' : '')"></p></div>
-						<div><p class="text-stone-400 text-xs uppercase tracking-widest mb-1">Type</p><p class="text-sm" :class="quote.rush_order ? 'text-amber-600' : 'text-stone-500'" x-text="quote.rush_order ? 'Rush' : 'Standard'"></p></div>
-						<div><p class="text-stone-400 text-xs uppercase tracking-widest mb-1">Total</p><p class="text-stone-900 text-sm font-medium" x-text="quote.final_price !== null ? fmtPrice(quote.final_price, quote.price_currency) : 'TBD'"></p></div>
+						<div><p class="text-stone-400 text-xs uppercase tracking-widest mb-1">Type</p><p class="text-sm" :class="quote.rush_order ? 'text-amber-600' : 'text-stone-500'" x-text="quote.rush_order ? 'Early delivery' : 'Standard'"></p></div>
+						<div><p class="text-stone-400 text-xs uppercase tracking-widest mb-1">Lead time</p><p class="text-stone-900 text-sm" x-text="quote.lead_time_days ? ('~' + quote.lead_time_days + ' days') : '—'"></p></div>
 					</div>
+
+					<template x-if="quote.final_price !== null">
+						<div class="border border-stone-100 px-4 py-3 space-y-1.5 text-sm">
+							<p class="text-stone-400 text-xs uppercase tracking-widest mb-1">Price Breakdown</p>
+							<template x-if="quote.base_price !== null && quote.base_price !== quote.final_price">
+								<div class="flex justify-between text-stone-500"><span>Rug subtotal</span><span x-text="fmtPrice(quote.base_price, quote.price_currency)"></span></div>
+							</template>
+							<template x-if="quote.manual_discount_pct">
+								<div class="flex justify-between text-green-700"><span x-text="'Discount (' + quote.manual_discount_pct + '%)'"></span><span>applied</span></div>
+							</template>
+							<template x-if="quote.rush_order">
+								<div class="flex justify-between text-amber-700"><span>Early delivery fee</span><span>included</span></div>
+							</template>
+							<template x-if="quote.gst_amount !== null">
+								<div class="flex justify-between text-stone-500"><span x-text="'GST ' + quote.gst_pct + '% (included)'"></span><span x-text="fmtPrice(quote.gst_amount, quote.price_currency)"></span></div>
+							</template>
+							<template x-if="quote.shipping_cost">
+								<div class="flex justify-between text-stone-500"><span>Shipping</span><span x-text="fmtPrice(quote.shipping_cost, quote.price_currency)"></span></div>
+							</template>
+							<div class="flex justify-between text-stone-900 font-medium border-t border-stone-100 pt-1.5"><span>Total</span><span x-text="fmtPrice(quote.final_price, quote.price_currency)"></span></div>
+						</div>
+					</template>
+
+					<template x-if="quote.vendor_sample_image_urls && quote.vendor_sample_image_urls.length">
+						<div>
+							<p class="text-stone-400 text-xs uppercase tracking-widest mb-2">Design Samples From Our Studio</p>
+							<div class="flex flex-wrap gap-2">
+								<template x-for="url in quote.vendor_sample_image_urls" :key="url">
+									<a :href="url" target="_blank" rel="noopener" class="block w-24 h-24 bg-stone-100 overflow-hidden"><img :src="url" alt="Design sample" class="w-full h-full object-cover hover:scale-105 transition-transform" /></a>
+								</template>
+							</div>
+						</div>
+					</template>
+					<template x-if="quote.reference_image_urls && quote.reference_image_urls.length">
+						<div>
+							<p class="text-stone-400 text-xs uppercase tracking-widest mb-2">Your Reference Images</p>
+							<div class="flex flex-wrap gap-2">
+								<template x-for="url in quote.reference_image_urls" :key="url">
+									<a :href="url" target="_blank" rel="noopener" class="block w-20 h-20 bg-stone-100 overflow-hidden"><img :src="url" alt="Reference image" class="w-full h-full object-cover" /></a>
+								</template>
+							</div>
+						</div>
+					</template>
 
 					<template x-if="quote.is_custom_request">
 						<div class="bg-stone-50 border border-stone-100 px-4 py-3 space-y-3">
@@ -169,10 +213,8 @@ endif;
 					<template x-if="quote.status === 'sent' && !quote.responding">
 						<div class="space-y-2 pt-1">
 							<template x-if="quote.final_price !== null">
-								<button @click="acceptAndPay(quote)" :disabled="quote.actionLoading" class="w-full storefront-cta-solid py-3 transition-colors flex items-center justify-center gap-2">
-									<span x-show="quote.actionLoading" class="w-3.5 h-3.5 border border-white/30 border-t-white rounded-full animate-spin inline-block"></span>
-									<span x-show="!quote.actionLoading"><?php dreamrugs_icon( 'package', 13 ); ?></span>
-									Accept &amp; Proceed to Payment
+								<button @click="quote.responding = 'accept'" class="w-full storefront-cta-solid py-3 transition-colors flex items-center justify-center gap-2">
+									<?php dreamrugs_icon( 'package', 13 ); ?> Accept Quote
 								</button>
 							</template>
 							<template x-if="quote.actionError"><div class="flex items-center gap-2 text-red-600 text-xs"><?php dreamrugs_icon( 'alert-triangle', 12 ); ?> <span x-text="quote.actionError"></span></div></template>
@@ -206,6 +248,21 @@ endif;
 						</div>
 					</div>
 
+					<div x-show="quote.responding === 'accept'" x-cloak class="border border-stone-900 p-4 space-y-3">
+						<p class="text-stone-900 text-sm font-medium">Confirm your order</p>
+						<p class="text-stone-500 text-xs">You're accepting <span x-text="quote.rug_name"></span> (<span x-text="quote.size_display || ''"></span>, ×<span x-text="quote.qty"></span>) for <strong x-text="fmtPrice(quote.final_price, quote.price_currency)"></strong>. Next you'll pay securely.</p>
+						<textarea x-model="quote.acceptNotes" rows="2" maxlength="1000" placeholder="Anything we should know — delivery timing, placement… (optional)" class="w-full border border-stone-200 focus:border-stone-400 px-3 py-2 text-stone-900 text-sm placeholder-stone-300 focus:outline-none transition-colors resize-none"></textarea>
+						<input x-model="quote.promoCode" type="text" placeholder="Promo code (optional)" class="w-full border border-stone-200 focus:border-stone-400 px-3 py-2 text-stone-900 text-sm uppercase placeholder-stone-300 placeholder:normal-case focus:outline-none" />
+						<template x-if="quote.actionError"><div class="flex items-center gap-2 text-red-600 text-xs"><?php dreamrugs_icon( 'alert-triangle', 12 ); ?> <span x-text="quote.actionError"></span></div></template>
+						<div class="flex gap-2">
+							<button @click="acceptAndPay(quote)" :disabled="quote.actionLoading" class="flex-1 storefront-cta-solid py-2.5 flex items-center justify-center gap-2">
+								<span x-show="quote.actionLoading" class="w-3.5 h-3.5 border border-white/30 border-t-white rounded-full animate-spin inline-block"></span>
+								Accept &amp; Proceed to Payment
+							</button>
+							<button @click="quote.responding = null" class="px-5 py-2.5 border border-stone-200 hover:border-stone-400 text-stone-500 text-xs transition-colors">Cancel</button>
+						</div>
+					</div>
+
 					<div x-show="quote.responding === 'reject'" x-cloak class="border border-stone-200 p-4 space-y-3" x-data="{ reason: '' }">
 						<p class="text-stone-700 text-sm font-medium">Reason for declining (optional)</p>
 						<textarea x-model="reason" rows="3" placeholder="Let us know why you are declining…" class="w-full border border-stone-200 focus:border-stone-400 px-3 py-2 text-stone-900 text-sm placeholder-stone-300 focus:outline-none transition-colors resize-none"></textarea>
@@ -216,6 +273,12 @@ endif;
 						</div>
 					</div>
 				</div>
+			</div>
+		</template>
+
+		<template x-if="!loading && quotes.length > visible">
+			<div class="pt-4 text-center">
+				<button @click="loadMore()" class="text-xs px-5 py-2.5 border border-stone-200 hover:border-stone-400 text-stone-600 hover:text-stone-900 uppercase tracking-wider transition-colors">Load more (<span x-text="quotes.length - visible"></span> more)</button>
 			</div>
 		</template>
 	</div>

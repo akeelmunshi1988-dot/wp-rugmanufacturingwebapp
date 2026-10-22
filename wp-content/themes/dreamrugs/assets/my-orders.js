@@ -24,7 +24,7 @@ const STATUS_META = {
 	cancelled:      { label: 'Cancelled',      color: 'text-red-600 border-red-200 bg-red-50',          dot: 'bg-red-400' },
 };
 
-const CANCELLABLE_STATUSES = [ 'pending', 'processing', 'in_production' ];
+const CANCELLABLE_STATUSES = [ 'pending', 'on-hold', 'processing', 'in_production' ]; // keep in sync with DRC_Customer_Orders_Rest_Routes::CANCELLATION_REFUND_POLICY
 const PAGE_SIZE = 10;
 
 function myOrdersList(config) {

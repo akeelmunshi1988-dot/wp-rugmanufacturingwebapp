@@ -10,11 +10,9 @@
  * from the original app's separate StaffUser/Customer tables — there is no
  * "admin browsing as a customer" duality here, just is_user_logged_in()
  * plus an extra Admin Panel link for users who can manage_woocommerce):
- * - Currency switcher is a display-only converter (assets/currency.js,
- *   ported from CurrencyContext.tsx) — it rewrites every .drc-price span,
- *   the customer is still charged in the store's real WooCommerce currency.
- *   Options come from DRC_Settings' `enabled_currencies` (empty ⇒ the full
- *   set); the control hides itself when only one currency is offered.
+ * - No currency switcher, like CustomerLayout.tsx: assets/currency.js picks
+ *   the display/charge currency automatically (customer's country, then IP
+ *   location, then browser language).
  * - Announcement bar: reads the drc_announcement CPT
  *   (DRC_Content_Types::get_announcements()) and rotates through the active
  *   entries with the same 5s interval / 300ms fade as CustomerLayout.tsx.
@@ -42,51 +40,15 @@ $default_announcement = 'Handcrafted, made to order — every rug, every size.';
 // exactly like CustomerLayout.tsx's `activeAnnouncement?.text ?? '…'`.
 $drc_announcements = class_exists( 'DRC_Content_Types' ) ? DRC_Content_Types::get_announcements() : array();
 
-$nav_items = array(
-	array( 'path' => home_url( '/' ), 'label' => 'Home' ),
-	array( 'path' => get_permalink( wc_get_page_id( 'shop' ) ), 'label' => 'Collection' ),
-	array( 'path' => home_url( '/custom-rug-request' ), 'label' => 'Custom Rug' ),
-	array( 'path' => home_url( '/about' ), 'label' => 'About Us' ),
-);
-
-$mega_menu = array(
-	'space' => array(
-		'heading' => 'Shop by Space',
-		'links'   => array(
-			array( 'label' => 'Living Room', 'to' => home_url( '/catalog/space/living_room' ) ),
-			array( 'label' => 'Bedroom', 'to' => home_url( '/catalog/space/bedroom' ) ),
-			array( 'label' => 'Dining Room', 'to' => home_url( '/catalog/space/dining_room' ) ),
-			array( 'label' => 'Entryway', 'to' => home_url( '/catalog/space/entryway' ) ),
-		),
-	),
-	'mood' => array(
-		'heading' => 'Shop by Mood',
-		'links'   => array(
-			array( 'label' => 'Warm & Earthy', 'to' => home_url( '/catalog/mood/warm_earthy' ) ),
-			array( 'label' => 'Quiet Luxury', 'to' => home_url( '/catalog/mood/quiet_luxury' ) ),
-			array( 'label' => 'Modern Minimal', 'to' => home_url( '/catalog/mood/modern_minimal' ) ),
-			array( 'label' => 'Bohemian', 'to' => home_url( '/catalog/mood/bohemian' ) ),
-			array( 'label' => 'Bold & Artistic', 'to' => home_url( '/catalog/mood/bold_artistic' ) ),
-			array( 'label' => 'Timeless Traditional', 'to' => home_url( '/catalog/mood/timeless_traditional' ) ),
-		),
-	),
-	'material' => array(
-		'heading' => 'Shop by Material',
-		'links'   => array(
-			array( 'label' => 'Wool', 'to' => home_url( '/catalog/material/wool' ) ),
-			array( 'label' => 'Silk', 'to' => home_url( '/catalog/material/silk' ) ),
-			array( 'label' => 'Cotton', 'to' => home_url( '/catalog/material/cotton' ) ),
-			array( 'label' => 'Synthetic', 'to' => home_url( '/catalog/material/synthetic' ) ),
-		),
-	),
-	'quick' => array(
-		'heading' => 'Quick Links',
-		'links'   => array(
-			array( 'label' => 'All Rugs', 'to' => get_permalink( wc_get_page_id( 'shop' ) ) ),
-			array( 'label' => 'Custom Rug Request', 'to' => home_url( '/custom-rug-request' ) ),
-		),
-	),
-);
+// Nav + "Collection" mega menu from the catalog's own spaces/moods/
+// materials/weaves, with the vendor's label overrides and hidden items
+// applied (DRC_Storefront_Menu — DreamRugs → Website Menu).
+$nav_items  = class_exists( 'DRC_Storefront_Menu' ) ? DRC_Storefront_Menu::nav() : array();
+$mega_menu  = class_exists( 'DRC_Storefront_Menu' ) ? DRC_Storefront_Menu::mega() : array();
+$show_cart  = ! empty( $drc_settings['show_direct_purchase'] ) || $cart_count > 0;
+$social     = dreamrugs_active_social_links();
+$header_wa  = dreamrugs_whatsapp_url();
+$shop_url   = get_permalink( wc_get_page_id( 'shop' ) );
 ?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
@@ -100,7 +62,6 @@ $mega_menu = array(
 		scrolled: false,
 		mobileOpen: false,
 		dropdownOpen: false,
-		currencyOpen: false,
 		infoBarDismissed: false,
 		announceFading: false,
 		announceIndex: 0,
@@ -165,32 +126,32 @@ $mega_menu = array(
 
 		<nav class="hidden lg:flex items-center gap-7 h-full">
 			<?php foreach ( $nav_items as $n ) :
-				$active = ( untrailingslashit( $n['path'] ) === untrailingslashit( home_url( $_SERVER['REQUEST_URI'] ?? '' ) ) );
-				if ( $n['label'] !== 'Collection' ) : ?>
-					<a href="<?php echo esc_url( $n['path'] ); ?>"
+				$active = ( untrailingslashit( $n['url'] ) === untrailingslashit( home_url( $_SERVER['REQUEST_URI'] ?? '' ) ) );
+				if ( 'nav:/catalog' !== $n['key'] ) : ?>
+					<a href="<?php echo esc_url( $n['url'] ); ?>"
 						class="storefront-nav-link border-b <?php echo $active ? 'text-stone-900 border-stone-900' : 'text-stone-500 hover:text-stone-900 border-transparent hover:border-stone-300'; ?>">
 						<?php echo esc_html( $n['label'] ); ?>
 					</a>
 				<?php else : ?>
 					<div class="group/mega h-full flex items-center">
-						<a href="<?php echo esc_url( $n['path'] ); ?>"
+						<a href="<?php echo esc_url( $n['url'] ); ?>"
 							class="storefront-nav-link border-b <?php echo $active ? 'text-stone-900 border-stone-900' : 'text-stone-500 hover:text-stone-900 border-transparent hover:border-stone-300'; ?>">
 							<?php echo esc_html( $n['label'] ); ?>
 						</a>
 						<div class="hidden group-hover/mega:block fixed left-0 right-0 bg-cream-200 border-t border-b border-stone-100 shadow-lg z-30"
 							:class="infoBarDismissed ? 'top-[70px]' : 'top-[102px]'">
-							<div class="w-[94vw] max-w-none mx-auto px-4 py-10 grid grid-cols-5 gap-10">
+							<div class="w-[94vw] max-w-none mx-auto px-4 py-10 grid grid-cols-6 gap-8">
 								<?php foreach ( $mega_menu as $section ) : ?>
 									<div class="space-y-3">
 										<p class="text-stone-900 text-xs font-semibold uppercase tracking-widest"><?php echo esc_html( $section['heading'] ); ?></p>
 										<div class="space-y-2.5">
 											<?php foreach ( $section['links'] as $l ) : ?>
-												<a href="<?php echo esc_url( $l['to'] ); ?>" class="block text-stone-500 hover:text-stone-900 text-sm transition-colors"><?php echo esc_html( $l['label'] ); ?></a>
+												<a href="<?php echo esc_url( $l['url'] ); ?>" class="block text-stone-500 hover:text-stone-900 text-sm transition-colors"><?php echo esc_html( $l['label'] ); ?></a>
 											<?php endforeach; ?>
 										</div>
 									</div>
 								<?php endforeach; ?>
-								<a href="<?php echo esc_url( get_permalink( wc_get_page_id( 'shop' ) ) ); ?>" class="group/promo relative overflow-hidden bg-stone-100 aspect-[4/5] block">
+								<a href="<?php echo esc_url( $shop_url ); ?>" class="group/promo relative overflow-hidden bg-stone-100 aspect-[4/5] block">
 									<img src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/shop-by-space-living-room.jpg' ); ?>" alt=""
 										class="absolute inset-0 w-full h-full object-cover group-hover/promo:scale-105 transition-transform duration-500" />
 									<div class="absolute inset-0 bg-gradient-to-t from-stone-950/70 via-transparent to-transparent"></div>
@@ -208,51 +169,29 @@ $mega_menu = array(
 				<?php if ( $logo_url ) : ?>
 					<img src="<?php echo esc_url( $logo_url ); ?>" alt="" class="flex-shrink-0 object-contain" style="height:46px;width:46px" />
 				<?php endif; ?>
-				<span class="font-serif text-xl font-medium tracking-wide text-[var(--drc-primary)]"><?php echo esc_html( $business_name ); ?></span>
+				<span class="font-serif text-lg min-[375px]:text-xl font-medium tracking-wide text-[var(--drc-primary,#85501b)]"><?php echo esc_html( $business_name ); ?></span>
 			</span>
 		</a>
 
 		<div class="hidden lg:flex items-center gap-5 ml-auto">
-			<?php
-			// Display-currency switcher. assets/currency.js does the actual
-			// conversion of every .drc-price span (ported from
-			// CurrencyContext.tsx) — the customer is still always charged in
-			// the store's real WooCommerce currency; this only changes shown
-			// numbers. The option list is driven by DRC_Settings'
-			// `enabled_currencies` so a vendor can narrow it; empty ⇒ the full
-			// set below (every code assets/currency.js knows a locale/symbol
-			// for). Hidden entirely when only one currency is on offer.
-			$drc_currency_labels = array(
-				'INR' => 'INR — ₹', 'USD' => 'USD — $', 'EUR' => 'EUR — €', 'GBP' => 'GBP — £',
-				'CAD' => 'CAD — CA$', 'AUD' => 'AUD — A$', 'AED' => 'AED', 'SGD' => 'SGD — S$',
-				'CHF' => 'CHF', 'SAR' => 'SAR', 'QAR' => 'QAR', 'JPY' => 'JPY — ¥',
-				'NZD' => 'NZD — NZ$', 'ZAR' => 'ZAR — R',
-			);
-			$drc_enabled_currencies = array_values( array_filter( (array) ( $drc_settings['enabled_currencies'] ?? array() ) ) );
-			$drc_currencies = $drc_enabled_currencies
-				? array_intersect_key( $drc_currency_labels, array_flip( $drc_enabled_currencies ) )
-				: $drc_currency_labels;
-			// Guarantee the store's own currency is always selectable.
-			$drc_base_currency = function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : 'INR';
-			if ( ! isset( $drc_currencies[ $drc_base_currency ] ) ) {
-				$drc_currencies = array( $drc_base_currency => $drc_currency_labels[ $drc_base_currency ] ?? $drc_base_currency ) + $drc_currencies;
-			}
-			?>
-			<?php if ( count( $drc_currencies ) > 1 ) : ?>
-			<div class="relative">
-				<select id="drc-currency-select" aria-label="Display currency" class="appearance-none bg-transparent text-sm text-stone-500 hover:text-stone-900 pr-4 py-1 focus:outline-none cursor-pointer transition-colors">
-					<?php foreach ( $drc_currencies as $code => $label ) : ?>
-						<option value="<?php echo esc_attr( $code ); ?>"><?php echo esc_html( $label ); ?></option>
+
+			<?php if ( $social || $header_wa ) : ?>
+				<div class="flex items-center gap-4">
+					<?php foreach ( $social as $platform ) : ?>
+						<a href="<?php echo esc_url( $platform['url'] ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php echo esc_attr( $platform['label'] ); ?>" title="<?php echo esc_attr( $platform['label'] ); ?>" class="text-stone-500 hover:text-stone-900 transition-colors"><?php dreamrugs_social_svg( $platform['path'], 16 ); ?></a>
 					<?php endforeach; ?>
-				</select>
-				<span class="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-stone-400"><?php dreamrugs_icon( 'chevron-down', 11 ); ?></span>
-			</div>
+					<?php if ( $header_wa ) : ?>
+						<a href="<?php echo esc_url( $header_wa ); ?>" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" title="WhatsApp" class="text-stone-500 hover:text-green-600 transition-colors"><?php dreamrugs_social_svg( dreamrugs_whatsapp_icon_path(), 16 ); ?></a>
+					<?php endif; ?>
+				</div>
 			<?php endif; ?>
 
+			<?php if ( $show_cart ) : // quote-only stores (direct purchase off) show no cart, like the original's SHOW_DIRECT_PURCHASE flag ?>
 			<a href="<?php echo esc_url( wc_get_cart_url() ); ?>" class="relative text-stone-500 hover:text-stone-900 transition-colors">
 				<?php dreamrugs_icon( 'shopping-cart', 18 ); ?>
 				<span id="drc-header-cart-badge" data-drc-cart-count="<?php echo (int) $cart_count; ?>" class="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-stone-900 text-white text-[10px] leading-4 text-center" <?php echo $cart_count > 0 ? '' : 'style="display:none"'; ?>><?php echo (int) $cart_count; ?></span>
 			</a>
+			<?php endif; ?>
 
 			<?php if ( $is_logged_in ) : ?>
 				<div class="relative" @click.outside="dropdownOpen = false">
@@ -282,7 +221,7 @@ $mega_menu = array(
 					</div>
 				</div>
 			<?php else : ?>
-				<a href="<?php echo esc_url( wp_login_url() ); ?>" class="text-sm text-stone-500 hover:text-stone-900 transition-colors tracking-wide">Sign In</a>
+				<a href="<?php echo esc_url( dreamrugs_login_url() ); ?>" class="flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900 transition-colors tracking-wide"><?php dreamrugs_icon( 'user', 14 ); ?> Sign In</a>
 			<?php endif; ?>
 		</div>
 
@@ -292,13 +231,39 @@ $mega_menu = array(
 		</button>
 	</div>
 
-	<div x-show="mobileOpen" x-cloak class="lg:hidden bg-white border-t border-stone-100 px-6 py-5 space-y-1">
+	<div x-show="mobileOpen" x-cloak class="lg:hidden bg-white border-t border-stone-100 px-6 py-5 space-y-1 max-h-[calc(100vh-102px)] overflow-y-auto">
 		<?php foreach ( $nav_items as $n ) : ?>
-			<a href="<?php echo esc_url( $n['path'] ); ?>" class="block py-2.5 text-sm text-stone-700 hover:text-stone-900 tracking-wide transition-colors border-b border-stone-50"><?php echo esc_html( $n['label'] ); ?></a>
+			<a href="<?php echo esc_url( $n['url'] ); ?>" class="block py-2.5 text-sm text-stone-700 hover:text-stone-900 tracking-wide transition-colors border-b border-stone-50"><?php echo esc_html( $n['label'] ); ?></a>
 		<?php endforeach; ?>
+		<?php if ( $mega_menu ) : ?>
+			<div class="py-3 grid grid-cols-2 gap-x-4 gap-y-5 border-b border-stone-50">
+				<?php foreach ( $mega_menu as $group ) : ?>
+					<div>
+						<p class="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2"><?php echo esc_html( $group['heading'] ); ?></p>
+						<div class="flex flex-col gap-1.5">
+							<?php foreach ( $group['links'] as $item ) : ?>
+								<a href="<?php echo esc_url( $item['url'] ); ?>" class="text-sm text-stone-600 hover:text-stone-900"><?php echo esc_html( $item['label'] ); ?></a>
+							<?php endforeach; ?>
+						</div>
+					</div>
+				<?php endforeach; ?>
+			</div>
+		<?php endif; ?>
+		<?php if ( $show_cart ) : ?>
 		<a href="<?php echo esc_url( wc_get_cart_url() ); ?>" class="flex items-center gap-2 py-2.5 text-sm text-stone-700 hover:text-stone-900 tracking-wide transition-colors border-b border-stone-50">
 			<?php dreamrugs_icon( 'shopping-cart', 14 ); ?> Cart<span id="drc-header-cart-mobile" data-drc-cart-count="<?php echo (int) $cart_count; ?>"><?php echo $cart_count > 0 ? ' (' . (int) $cart_count . ')' : ''; ?></span>
 		</a>
+		<?php endif; ?>
+		<?php if ( $social || $header_wa ) : ?>
+			<div class="flex items-center gap-5 py-3 border-b border-stone-50">
+				<?php foreach ( $social as $platform ) : ?>
+					<a href="<?php echo esc_url( $platform['url'] ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php echo esc_attr( $platform['label'] ); ?>" class="text-stone-500 hover:text-stone-900"><?php dreamrugs_social_svg( $platform['path'], 18 ); ?></a>
+				<?php endforeach; ?>
+				<?php if ( $header_wa ) : ?>
+					<a href="<?php echo esc_url( $header_wa ); ?>" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" class="text-stone-500 hover:text-green-600"><?php dreamrugs_social_svg( dreamrugs_whatsapp_icon_path(), 18 ); ?></a>
+				<?php endif; ?>
+			</div>
+		<?php endif; ?>
 		<?php if ( $is_logged_in ) : ?>
 			<div class="pt-3 space-y-1">
 				<div class="flex items-center gap-2.5 py-2 border-b border-stone-100">
@@ -310,10 +275,13 @@ $mega_menu = array(
 				</div>
 				<a href="<?php echo esc_url( home_url( '/my-orders' ) ); ?>" class="flex items-center gap-3 py-2.5 text-sm text-stone-600 hover:text-stone-900 transition-colors"><?php dreamrugs_icon( 'package', 13, 'text-stone-400' ); ?> My Orders</a>
 				<a href="<?php echo esc_url( home_url( '/my-quotes' ) ); ?>" class="flex items-center gap-3 py-2.5 text-sm text-stone-600 hover:text-stone-900 transition-colors"><?php dreamrugs_icon( 'file-text', 13, 'text-stone-400' ); ?> My Quotes</a>
+				<?php if ( $is_admin_user ) : ?>
+					<a href="<?php echo esc_url( admin_url() ); ?>" class="flex items-center gap-3 py-2.5 text-sm text-stone-600 hover:text-stone-900 transition-colors"><?php dreamrugs_icon( 'layout-dashboard', 13, 'text-stone-400' ); ?> Admin Panel</a>
+				<?php endif; ?>
 				<a href="<?php echo esc_url( wp_logout_url( home_url() ) ); ?>" class="flex items-center gap-3 py-2.5 text-sm text-stone-500 hover:text-red-600 transition-colors w-full"><?php dreamrugs_icon( 'log-out', 13 ); ?> Sign out</a>
 			</div>
 		<?php else : ?>
-			<div class="pt-3"><a href="<?php echo esc_url( wp_login_url() ); ?>" class="text-center block py-2.5 text-sm text-stone-600 hover:text-stone-900 transition-colors">Sign In</a></div>
+			<div class="pt-3"><a href="<?php echo esc_url( dreamrugs_login_url() ); ?>" class="text-center block py-2.5 text-sm text-stone-600 hover:text-stone-900 transition-colors">Sign In</a></div>
 		<?php endif; ?>
 	</div>
 </header>

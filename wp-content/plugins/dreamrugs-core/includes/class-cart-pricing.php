@@ -9,15 +9,16 @@
  * applies, which is exactly the class of pricing-fidelity bug the
  * migration plan calls out as the highest risk in this whole port.
  *
- * GST is deliberately not handled here yet: DRC_Settings defaults
- * gst_inclusive to false, and this repricing only needs to reproduce
- * calculate_quote()'s subtotal/rush/discount math to stay correct while
- * that's the case. If gst_inclusive is turned on for a real deployment,
- * extend recalculate_cart_item_price() to back GST out of the repriced
- * total the same way DRC_Quote_Engine::calculate_quote() does, and add a
- * matching display-only breakdown line via woocommerce_get_item_data —
- * do not let WooCommerce's own tax engine apply on top (see the migration
- * plan's "GST is inclusive-and-backed-out" note).
+ * GST: the engine's final price is already GST-inclusive when
+ * gst_inclusive is on, so the line price is correct either way and
+ * WooCommerce's own tax engine stays off. Export buyers (billing country
+ * outside India) are zero-rated on the quote rows recorded at checkout
+ * (DRC_Order_Hooks::record_checkout_quotes) and on their invoices — the
+ * charged total is the same, only the tax breakdown differs, exactly as
+ * in the original _price_cart_items(is_export=True).
+ *
+ * Amounts are converted into the shopper's charge currency by
+ * DRC_Multi_Currency (a no-op in the store's base currency).
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -84,23 +85,28 @@ class DRC_Cart_Pricing {
 		foreach ( $cart->get_cart() as $cart_item ) {
 			$product = $cart_item['data'];
 			if ( ! $product instanceof WC_Product_Variation ) {
+				self::convert_plain_price( $product );
 				continue;
 			}
 			$parent_id   = $product->get_parent_id();
 			$material_id = (int) get_post_meta( $parent_id, '_drc_material_id', true );
 			$ft          = $product->get_meta( '_drc_size_ft' );
-			if ( ! $material_id || ! $ft ) {
-				continue; // not a DRC-priced product (or misconfigured) — leave WooCommerce's own price alone.
-			}
-
-			$dimensions = DRC_Quote_Engine::parse_catalog_dimensions( $ft, 0.3048 );
-			if ( ! $dimensions ) {
+			$cm          = $product->get_meta( '_drc_size_cm' );
+			// ft first, cm as the fallback — same order as the quote
+			// engine's catalog_size_offer(); a cm-only size is still priced.
+			$dimensions = DRC_Quote_Engine::parse_catalog_dimensions( $ft ?: null, 0.3048 )
+				?: DRC_Quote_Engine::parse_catalog_dimensions( $cm ?: null, 0.01 );
+			if ( ! $material_id || ! $dimensions ) {
+				self::convert_plain_price( $product ); // not DRC-priced — keep WooCommerce's own price (in the charge currency).
 				continue;
 			}
 
 			$rug = array(
-				'sizes'               => array( array( 'ft' => $ft, 'price' => (float) $product->get_regular_price(), 'lead_time_days' => (int) $product->get_meta( '_drc_lead_time_days' ) ) ),
-				'base_price_currency' => get_woocommerce_currency(),
+				// get_price() from a fresh object — the in-memory product may
+				// already carry this request's earlier set_price(). Respects a
+				// sale price, unlike get_regular_price().
+				'sizes'               => array( array( 'ft' => $ft ?: null, 'cm' => $cm ?: null, 'price' => (float) wc_get_product( $product->get_id() )->get_price(), 'lead_time_days' => (int) $product->get_meta( '_drc_lead_time_days' ) ) ),
+				'base_price_currency' => DRC_Multi_Currency::base(),
 				'weave_type'          => get_post_meta( $parent_id, '_drc_weave_type', true ) ?: null,
 				'lead_time_days'      => (int) get_post_meta( $parent_id, '_drc_lead_time_days', true ) ?: null,
 			);
@@ -126,7 +132,20 @@ class DRC_Cart_Pricing {
 			// price_per_piece already reflects rush surcharge + any bulk
 			// discount for this quantity — set_price() is WooCommerce's
 			// supported per-line override point, applied before totals sum.
-			$product->set_price( $result['price_per_piece'] );
+			$product->set_price( DRC_Multi_Currency::convert( (float) $result['price_per_piece'] ) );
+		}
+	}
+
+	/** Non-DRC lines keep WooCommerce's own price, converted into the
+	 * currency being charged (a no-op in the base currency). Reads a fresh
+	 * product so repeated totals passes in one request never compound. */
+	private static function convert_plain_price( $product ) {
+		if ( ! $product instanceof WC_Product || 1.0 === DRC_Multi_Currency::rate() ) {
+			return;
+		}
+		$fresh = wc_get_product( $product->get_id() );
+		if ( $fresh && '' !== $fresh->get_price() ) {
+			$product->set_price( DRC_Multi_Currency::convert( (float) $fresh->get_price() ) );
 		}
 	}
 

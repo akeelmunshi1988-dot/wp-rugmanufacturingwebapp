@@ -23,6 +23,8 @@ function myQuotesList(config) {
 		sortBy: 'date_desc',
 		dateFrom: '',
 		dateTo: '',
+		pageSize: 10,
+		visible: 10,
 
 		init() {
 			this.fetchQuotes();
@@ -39,7 +41,8 @@ function myQuotesList(config) {
 				const res = await fetch( `${this.restUrl}/quotes?${params}`, { credentials: 'same-origin', headers: drcRestHeaders() } );
 				if ( ! res.ok ) throw new Error( 'Failed to load quotes.' );
 				const data = await res.json();
-				this.quotes = data.items.map( ( q ) => ( { ...q, expanded: 'sent' === q.status, responding: null, actionError: '', actionLoading: false, reviewLoading: false, reviewMsg: '' } ) );
+				this.quotes = data.items.map( ( q ) => ( { ...q, expanded: 'sent' === q.status, responding: null, actionError: '', actionLoading: false, reviewLoading: false, reviewMsg: '', acceptNotes: '', promoCode: '' } ) );
+				this.visible = this.pageSize;
 				this.total = data.total;
 				this.actionNeeded = data.action_needed;
 			} catch ( e ) {
@@ -47,6 +50,16 @@ function myQuotesList(config) {
 			} finally {
 				this.loading = false;
 			}
+		},
+
+		/** Same paging as the original's "Load more" — the list is already
+		 * fetched; this only reveals it in steps. */
+		shownQuotes() {
+			return this.quotes.slice( 0, this.visible );
+		},
+
+		loadMore() {
+			this.visible += this.pageSize;
 		},
 
 		setFilter( key ) {
@@ -112,7 +125,8 @@ function myQuotesList(config) {
 			quote.actionError = '';
 			try {
 				const res = await fetch( `${this.restUrl}/quotes/${quote.quote_id}/accept`, {
-					method: 'PATCH', credentials: 'same-origin', headers: drcRestHeaders( { 'Content-Type': 'application/json' } ), body: '{}',
+					method: 'PATCH', credentials: 'same-origin', headers: drcRestHeaders( { 'Content-Type': 'application/json' } ),
+					body: JSON.stringify( { notes: quote.acceptNotes || '', promo_code: ( quote.promoCode || '' ).trim() } ),
 				} );
 				const data = await res.json();
 				if ( ! res.ok ) throw new Error( data.message || 'Could not accept this quote.' );

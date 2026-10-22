@@ -72,6 +72,17 @@ if ( ! empty( $tax_query ) ) { $query_args['tax_query'] = $tax_query; } // phpcs
 $products_query = new WP_Query( $query_args );
 $base_url       = home_url( "/weaves/{$weave}/" );
 
+$drc_weave_url = home_url( '/weaves/' . $weave . '/' );
+dreamrugs_seo( array(
+	'title'       => $drc_story['seoTitle'],
+	'description' => $drc_story['seoDescription'],
+	'noindex'     => empty( $drc_story['indexable'] ),
+	'canonical'   => $drc_weave_url,
+	'jsonld'      => array_values( array_filter( array(
+		dreamrugs_breadcrumb_jsonld( array( array( 'Home', home_url( '/' ) ), array( 'Collection', get_permalink( wc_get_page_id( 'shop' ) ) ), array( $drc_story['name'] . ' Rugs', $drc_weave_url ) ) ),
+		dreamrugs_faq_jsonld( $drc_story['faq'] ?? array() ),
+	) ) ),
+) );
 get_header();
 $drc_grid_images  = dreamrugs_collection_display_images( 'weave', $weave );
 $drc_grid_title   = $drc_story['name'] . ' Rugs';

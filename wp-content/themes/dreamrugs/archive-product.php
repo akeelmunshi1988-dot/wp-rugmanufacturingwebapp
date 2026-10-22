@@ -7,13 +7,11 @@
  * facet-priority idea as the original (a taxonomy archive owns the path,
  * everything else is a query string).
  *
- * Deliberate simplification from the original: filtering/sorting/search
- * here submits a real GET request (full page reload) rather than the
- * original's live AJAX refetch + IntersectionObserver infinite scroll —
- * this maps directly onto WordPress's own query-var/pagination conventions
- * (same approach WooCommerce's native product filter widgets use) and
- * needed no custom AJAX endpoint for a first pass. Revisit with a small
- * REST-backed Alpine component later if true infinite scroll is wanted.
+ * Filters navigate to clean URLs (/collections/{facet}/{value}/ owns the
+ * path, other filters ride as query args — buildCatalogUrl()). More rugs
+ * load as you scroll (assets/catalog.js fetches the next page and appends
+ * its cards, like the original's IntersectionObserver), with the normal
+ * page links kept for no-JS visitors and crawlers.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -26,8 +24,11 @@ $sort_options = array(
 	'price-desc' => 'Price: High → Low',
 	'lead-asc'   => 'Fastest delivery',
 );
-$room_type_options = array( 'living_room', 'bedroom', 'dining_room', 'entryway' );
-$mood_tag_options  = array( 'warm_earthy', 'quiet_luxury', 'modern_minimal', 'bohemian', 'bold_artistic', 'timeless_traditional' );
+// Spaces/moods from the catalog's own terms; weaves/piles from the
+// Catalog Masters lists (DreamRugs → Catalog Masters).
+$drc_terms         = function ( string $tax ) { $t = get_terms( array( 'taxonomy' => $tax, 'hide_empty' => false ) ); return is_wp_error( $t ) ? array() : wp_list_pluck( $t, 'slug' ); };
+$room_type_options = $drc_terms( 'room_type' );
+$mood_tag_options  = $drc_terms( 'mood_tag' );
 $tag_label         = fn( string $v ) => implode( ' ', array_map( 'ucfirst', explode( '_', $v ) ) );
 
 // Material comes from the real material_type taxonomy (only terms actually
@@ -37,8 +38,8 @@ $tag_label         = fn( string $v ) => implode( ' ', array_map( 'ucfirst', expl
 // of these three are a fixed guess baked into the theme any more.
 $material_terms = get_terms( array( 'taxonomy' => 'material_type', 'hide_empty' => true ) );
 $material_terms = is_wp_error( $material_terms ) ? array() : $material_terms;
-$pile_options    = dreamrugs_distinct_product_meta_values( '_drc_pile_height' );
-$weave_options   = dreamrugs_distinct_product_meta_values( '_drc_weave_type' );
+$pile_options    = class_exists( 'DRC_Catalog_Masters' ) ? wp_list_pluck( DRC_Catalog_Masters::get( 'piles', true ), 'name' ) : dreamrugs_distinct_product_meta_values( '_drc_pile_height' );
+$weave_options   = class_exists( 'DRC_Catalog_Masters' ) ? wp_list_pluck( DRC_Catalog_Masters::get( 'weaves', true ), 'name' ) : dreamrugs_distinct_product_meta_values( '_drc_weave_type' );
 
 $search   = sanitize_text_field( $_GET['s'] ?? '' ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only filter state from a GET form, no state-changing action.
 $sort     = sanitize_text_field( $_GET['sort'] ?? 'default' ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -113,7 +114,7 @@ $build_catalog_url = function ( array $overrides ) use ( $room, $mood, $material
 	if ( $sort && 'default' !== $sort ) { $params['sort'] = $sort; }
 	if ( $search ) { $params['s'] = $search; }
 
-	$path = $facet ? home_url( "/catalog/{$facet}/{$facet_value}" ) : home_url( '/catalog' );
+	$path = $facet ? home_url( "/collections/{$facet}/{$facet_value}/" ) : home_url( '/catalog/' );
 	return $params ? $path . '?' . http_build_query( $params ) : $path;
 };
 
@@ -127,6 +128,30 @@ $build_catalog_url = function ( array $overrides ) use ( $room, $mood, $material
 $drc_facet_key = is_tax( 'material_type' ) ? 'material' : ( is_tax( 'room_type' ) ? 'space' : ( is_tax( 'mood_tag' ) ? 'mood' : null ) );
 $drc_story     = $drc_facet_key ? dreamrugs_get_collection_story( $drc_facet_key, get_queried_object()->slug ) : null;
 
+// Collection SEO (WeaveTypePage.tsx <SEO>): the page's own title and
+// description, noindex for aliases/uncurated values, FAQ + breadcrumb data.
+if ( $drc_story ) {
+	$drc_url = home_url( '/collections/' . $drc_facet_key . '/' . get_queried_object()->slug . '/' );
+	dreamrugs_seo( array(
+		'title'       => $drc_story['seoTitle'],
+		'description' => $drc_story['seoDescription'],
+		'noindex'     => empty( $drc_story['indexable'] ) || $search || $paged > 1,
+		'canonical'   => $drc_url,
+		'jsonld'      => array_values( array_filter( array(
+			dreamrugs_breadcrumb_jsonld( array( array( 'Home', home_url( '/' ) ), array( 'Collection', get_permalink( wc_get_page_id( 'shop' ) ) ), array( $drc_story['name'] . ' Rugs', $drc_url ) ) ),
+			dreamrugs_faq_jsonld( $drc_story['faq'] ?? array() ),
+		) ) ),
+	) );
+} elseif ( ! $drc_facet_key ) {
+	dreamrugs_seo( array(
+		'title'       => 'Handmade Rugs & Carpets — The Collection',
+		'description' => 'Browse handmade rugs and carpets — hand-knotted, hand-tufted and flatweave — made to order in any size by artisans in Bhadohi, India.',
+		'canonical'   => get_permalink( wc_get_page_id( 'shop' ) ),
+		'noindex'     => (bool) $search,
+		'jsonld'      => array( dreamrugs_breadcrumb_jsonld( array( array( 'Home', home_url( '/' ) ), array( 'Collection', get_permalink( wc_get_page_id( 'shop' ) ) ) ) ) ),
+	) );
+}
+
 get_header();
 ?>
 
@@ -136,21 +161,30 @@ get_header();
 	$drc_grid_eyebrow = 'Discover your next favourite';
 	require get_theme_file_path( 'template-parts/collection-image-grid.php' );
 	require get_theme_file_path( 'template-parts/collection-story-block.php' );
+elseif ( ! $drc_facet_key ) :
+	// Main catalog: "The Rug Collection" grid from the 'default' curated set.
+	$drc_grid_images  = dreamrugs_collection_display_images( 'default' );
+	$drc_grid_title   = 'The Rug Collection';
+	$drc_grid_eyebrow = 'Discover your next favourite';
+	require get_theme_file_path( 'template-parts/collection-image-grid.php' );
 endif; ?>
 
 <div id="collection-rugs" class="w-[94vw] max-w-none mx-auto px-4 scroll-mt-24" x-data="{ filtersOpen: <?php echo $filters_open ? 'true' : 'false'; ?>, sizeUnit: (localStorage.getItem('dreamrugs_measurement_unit') === 'cm' ? 'cm' : 'ft') }" x-init="$watch('sizeUnit', (v) => localStorage.setItem('dreamrugs_measurement_unit', v))">
-	<?php if ( ! $drc_story ) : ?>
+	<?php if ( ! $drc_story && empty( $drc_grid_images ) ) : ?>
 	<div class="py-14 border-b border-stone-100 text-center">
-		<h1 class="storefront-heading text-4xl">Latest Rug Designs</h1>
+		<h1 class="storefront-heading text-4xl">The Rug Collection</h1>
 	</div>
 	<?php endif; ?>
 
 	<div class="py-5 border-b border-stone-100">
-		<form method="get" action="<?php echo esc_url( home_url( '/catalog' ) ); ?>" class="flex flex-wrap items-center gap-4">
+		<form method="get" action="<?php echo esc_url( strtok( $build_catalog_url( array() ), '?' ) ); ?>" class="flex flex-wrap items-center gap-4">
 			<div class="relative flex-1 min-w-52 max-w-xs">
 				<span class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400"><?php dreamrugs_icon( 'search', 13 ); ?></span>
 				<input type="text" name="s" value="<?php echo esc_attr( $search ); ?>" placeholder="Search rugs…"
 					class="w-full border border-stone-200 focus:border-stone-400 pl-8 pr-8 py-2 text-stone-900 text-sm placeholder-stone-400 focus:outline-none transition-colors" />
+				<?php if ( $search ) : ?>
+					<a href="<?php echo esc_url( remove_query_arg( 's', $build_catalog_url( array() ) ) ); ?>" aria-label="Clear search" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-900"><?php dreamrugs_icon( 'x', 13 ); ?></a>
+				<?php endif; ?>
 			</div>
 
 			<button type="button" @click="filtersOpen = !filtersOpen"
@@ -187,10 +221,10 @@ endif; ?>
 				<div class="space-y-1">
 					<label class="block text-xs text-stone-400 uppercase tracking-wider">Material</label>
 					<div class="relative">
-						<select name="material" onchange="this.form.submit()" class="appearance-none text-xs border border-stone-200 pl-3 pr-7 py-2 text-stone-700 capitalize focus:outline-none focus:border-stone-400 transition-colors min-w-32">
-							<option value="all" <?php selected( $material, 'all' ); ?>>All</option>
+						<select name="material" onchange="window.location.href = this.options[this.selectedIndex].dataset.url" class="appearance-none text-xs border border-stone-200 pl-3 pr-7 py-2 text-stone-700 capitalize focus:outline-none focus:border-stone-400 transition-colors min-w-32">
+							<option value="all" data-url="<?php echo esc_url( $build_catalog_url( array( 'material' => 'all' ) ) ); ?>" <?php selected( $material, 'all' ); ?>>All</option>
 							<?php foreach ( $material_terms as $term ) : ?>
-								<option value="<?php echo esc_attr( $term->slug ); ?>" <?php selected( $material, $term->slug ); ?>><?php echo esc_html( $term->name ); ?></option>
+								<option value="<?php echo esc_attr( $term->slug ); ?>" data-url="<?php echo esc_url( $build_catalog_url( array( 'material' => $term->slug ) ) ); ?>" <?php selected( $material, $term->slug ); ?>><?php echo esc_html( $term->name ); ?></option>
 							<?php endforeach; ?>
 						</select>
 						<span class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><?php dreamrugs_icon( 'chevron-down', 12 ); ?></span>
@@ -199,9 +233,9 @@ endif; ?>
 				<div class="space-y-1">
 					<label class="block text-xs text-stone-400 uppercase tracking-wider">Weave</label>
 					<div class="relative">
-						<select name="weave" onchange="this.form.submit()" class="appearance-none text-xs border border-stone-200 pl-3 pr-7 py-2 text-stone-700 capitalize focus:outline-none focus:border-stone-400 transition-colors min-w-32">
+						<select name="weave" onchange="window.location.href = this.options[this.selectedIndex].dataset.url" class="appearance-none text-xs border border-stone-200 pl-3 pr-7 py-2 text-stone-700 capitalize focus:outline-none focus:border-stone-400 transition-colors min-w-32">
 							<?php foreach ( array_merge( array( 'all' ), $weave_options ) as $w ) : ?>
-								<option value="<?php echo esc_attr( $w ); ?>" <?php selected( $weave, $w ); ?>><?php echo esc_html( 'all' === $w ? 'All' : $w ); ?></option>
+								<option value="<?php echo esc_attr( $w ); ?>" data-url="<?php echo esc_url( $build_catalog_url( array( 'weave' => $w ) ) ); ?>" <?php selected( $weave, $w ); ?>><?php echo esc_html( 'all' === $w ? 'All' : $w ); ?></option>
 							<?php endforeach; ?>
 						</select>
 						<span class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><?php dreamrugs_icon( 'chevron-down', 12 ); ?></span>
@@ -210,9 +244,9 @@ endif; ?>
 				<div class="space-y-1">
 					<label class="block text-xs text-stone-400 uppercase tracking-wider">Pile</label>
 					<div class="relative">
-						<select name="pile" onchange="this.form.submit()" class="appearance-none text-xs border border-stone-200 pl-3 pr-7 py-2 text-stone-700 capitalize focus:outline-none focus:border-stone-400 transition-colors min-w-32">
+						<select name="pile" onchange="window.location.href = this.options[this.selectedIndex].dataset.url" class="appearance-none text-xs border border-stone-200 pl-3 pr-7 py-2 text-stone-700 capitalize focus:outline-none focus:border-stone-400 transition-colors min-w-32">
 							<?php foreach ( array_merge( array( 'all' ), $pile_options ) as $p ) : ?>
-								<option value="<?php echo esc_attr( $p ); ?>" <?php selected( $pile, $p ); ?>><?php echo esc_html( 'all' === $p ? 'All' : $p ); ?></option>
+								<option value="<?php echo esc_attr( $p ); ?>" data-url="<?php echo esc_url( $build_catalog_url( array( 'pile' => $p ) ) ); ?>" <?php selected( $pile, $p ); ?>><?php echo esc_html( 'all' === $p ? 'All' : $p ); ?></option>
 							<?php endforeach; ?>
 						</select>
 						<span class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><?php dreamrugs_icon( 'chevron-down', 12 ); ?></span>
@@ -221,9 +255,9 @@ endif; ?>
 				<div class="space-y-1">
 					<label class="block text-xs text-stone-400 uppercase tracking-wider">Space</label>
 					<div class="relative">
-						<select name="room_type" onchange="this.form.submit()" class="appearance-none text-xs border border-stone-200 pl-3 pr-7 py-2 text-stone-700 focus:outline-none focus:border-stone-400 transition-colors min-w-36">
+						<select name="room_type" onchange="window.location.href = this.options[this.selectedIndex].dataset.url" class="appearance-none text-xs border border-stone-200 pl-3 pr-7 py-2 text-stone-700 focus:outline-none focus:border-stone-400 transition-colors min-w-36">
 							<?php foreach ( array_merge( array( 'all' ), $room_type_options ) as $r ) : ?>
-								<option value="<?php echo esc_attr( $r ); ?>" <?php selected( $room, $r ); ?>><?php echo esc_html( 'all' === $r ? 'All' : $tag_label( $r ) ); ?></option>
+								<option value="<?php echo esc_attr( $r ); ?>" data-url="<?php echo esc_url( $build_catalog_url( array( 'room_type' => $r ) ) ); ?>" <?php selected( $room, $r ); ?>><?php echo esc_html( 'all' === $r ? 'All' : $tag_label( $r ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 						<span class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><?php dreamrugs_icon( 'chevron-down', 12 ); ?></span>
@@ -232,9 +266,9 @@ endif; ?>
 				<div class="space-y-1">
 					<label class="block text-xs text-stone-400 uppercase tracking-wider">Mood</label>
 					<div class="relative">
-						<select name="mood" onchange="this.form.submit()" class="appearance-none text-xs border border-stone-200 pl-3 pr-7 py-2 text-stone-700 focus:outline-none focus:border-stone-400 transition-colors min-w-40">
+						<select name="mood" onchange="window.location.href = this.options[this.selectedIndex].dataset.url" class="appearance-none text-xs border border-stone-200 pl-3 pr-7 py-2 text-stone-700 focus:outline-none focus:border-stone-400 transition-colors min-w-40">
 							<?php foreach ( array_merge( array( 'all' ), $mood_tag_options ) as $m ) : ?>
-								<option value="<?php echo esc_attr( $m ); ?>" <?php selected( $mood, $m ); ?>><?php echo esc_html( 'all' === $m ? 'All' : $tag_label( $m ) ); ?></option>
+								<option value="<?php echo esc_attr( $m ); ?>" data-url="<?php echo esc_url( $build_catalog_url( array( 'mood' => $m ) ) ); ?>" <?php selected( $mood, $m ); ?>><?php echo esc_html( 'all' === $m ? 'All' : $tag_label( $m ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 						<span class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><?php dreamrugs_icon( 'chevron-down', 12 ); ?></span>
@@ -252,8 +286,8 @@ endif; ?>
 				<a href="<?php echo esc_url( home_url( '/catalog' ) ); ?>" class="text-xs text-stone-400 hover:text-stone-900 underline underline-offset-4 transition-colors">Clear all filters</a>
 			</div>
 		<?php else : ?>
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-12">
-				<?php $loop_index = 0; ?>
+			<div id="drc-catalog-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-12">
+				<?php $loop_index = ( $paged - 1 ) * $page_size; // keeps hover-expansion columns right across loaded pages ?>
 				<?php while ( $products_query->have_posts() ) : $products_query->the_post();
 					global $product;
 					$gallery_ids   = $product->get_gallery_image_ids();
@@ -270,7 +304,7 @@ endif; ?>
 						<div class="relative aspect-[4/5]">
 						<div class="absolute inset-y-0 w-full overflow-hidden bg-stone-100 transition-[width,left,right,transform,box-shadow] duration-500 ease-out lg:group-hover:w-[calc(200%+1.5rem)] lg:group-focus-within:w-[calc(200%+1.5rem)] lg:group-hover:shadow-2xl lg:group-focus-within:shadow-2xl <?php echo esc_attr( $expansion_position ); ?>">
 							<?php if ( $image_url ) : ?>
-								<img src="<?php echo esc_url( $image_url ); ?>" alt="<?php the_title_attribute(); ?>" loading="lazy" class="w-full h-full object-contain bg-white transition-opacity duration-500 <?php echo $hover_url ? 'group-hover:opacity-0' : ''; ?>" />
+								<img src="<?php echo esc_url( $image_url ); ?>" data-drc-cover="<?php echo esc_url( $image_url ); ?>" alt="<?php the_title_attribute(); ?>" loading="lazy" class="w-full h-full object-contain bg-white transition-opacity duration-500 <?php echo $hover_url ? 'group-hover:opacity-0' : ''; ?>" />
 								<?php if ( $hover_url ) : ?>
 									<img src="<?php echo esc_url( $hover_url ); ?>" alt="" loading="lazy" aria-hidden="true" class="absolute inset-0 w-full h-full object-contain bg-white opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 								<?php endif; ?>
@@ -287,7 +321,7 @@ endif; ?>
 							<?php if ( ! empty( $color_options ) ) : ?>
 								<div class="flex items-center justify-center gap-1.5 py-1" aria-label="<?php echo esc_attr( count( $color_options ) . ' color options' ); ?>">
 									<?php foreach ( array_slice( $color_options, 0, 6 ) as $color ) : ?>
-										<span title="<?php echo esc_attr( $color['name'] ); ?>" class="w-3.5 h-3.5 rounded-full border border-black/10" style="background-color: <?php echo esc_attr( $color['hex'] ); ?>"></span>
+										<span title="<?php echo esc_attr( $color['name'] . ( ! empty( $color['image_url'] ) ? ' — preview' : '' ) ); ?>" <?php if ( ! empty( $color['image_url'] ) ) : ?>tabindex="0" data-drc-swatch="<?php echo esc_url( $color['image_url'] ); ?>"<?php endif; ?> class="w-3.5 h-3.5 rounded-full border border-black/10 <?php echo ! empty( $color['image_url'] ) ? 'cursor-pointer ring-offset-1 focus:ring-1 focus:ring-stone-500 outline-none' : ''; ?>" style="background-color: <?php echo esc_attr( $color['hex'] ); ?>"></span>
 									<?php endforeach; ?>
 									<?php if ( count( $color_options ) > 6 ) : ?>
 										<span class="text-stone-400 text-[10px]">+<?php echo (int) ( count( $color_options ) - 6 ); ?></span>
@@ -299,8 +333,12 @@ endif; ?>
 				<?php endwhile; ?>
 			</div>
 
+			<div id="drc-catalog-sentinel" class="flex justify-center py-12" data-next="<?php echo $paged < $products_query->max_num_pages ? esc_url( get_pagenum_link( $paged + 1 ) ) : ''; ?>">
+				<div class="drc-loading hidden w-5 h-5 border border-stone-400 border-t-transparent rounded-full animate-spin"></div>
+				<p class="drc-end text-stone-400 text-xs uppercase tracking-wider <?php echo $paged < $products_query->max_num_pages ? 'hidden' : ''; ?>">You've reached the end of the collection</p>
+			</div>
 			<?php if ( $products_query->max_num_pages > 1 ) : ?>
-				<div class="flex justify-center pt-12">
+				<div id="drc-catalog-pager" class="flex justify-center pt-12">
 					<?php
 					echo paginate_links( array( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- paginate_links() output is already escaped.
 						'total'     => $products_query->max_num_pages,

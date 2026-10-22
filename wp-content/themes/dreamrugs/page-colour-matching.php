@@ -17,9 +17,9 @@ $eyebrow = $s['colour_matching_eyebrow'] ?: 'Professional colour matching';
 $heading = $s['colour_matching_heading'] ?: 'Specify colour with confidence.';
 $body    = $s['colour_matching_body'] ?: "Bring your palette into the conversation. Share a colour reference, fabric swatch or yarn sample with your rug brief so we can discuss the closest match for your chosen material.\n\nInclude the reference system and code, such as Pantone, when available. Screens and fibres can show colour differently; discuss a physical sample before confirming your final palette.";
 $items   = ! empty( $s['colour_matching_items'] ) ? $s['colour_matching_items'] : array(
-	array( 'title' => 'Pantone Colours', 'description' => 'Reference a Pantone code or attach your selected swatch.', 'image_url' => '' ),
-	array( 'title' => 'ARS Wool & Viscose Silk', 'description' => 'Wool Box 1200 and 1400 · ARS 1000 Viscose Silk Box.', 'image_url' => '' ),
-	array( 'title' => 'Additional ARS Systems', 'description' => 'ARS 600 Box · ARS 700 Viscose Silk Box.', 'image_url' => '' ),
+	array( 'title' => 'Pantone Colours', 'description' => 'Reference a Pantone code or attach your selected swatch.', 'image_url' => get_stylesheet_directory_uri() . '/assets/journey/design.jpg' ),
+	array( 'title' => 'ARS Wool & Viscose Silk', 'description' => 'Wool Box 1200 and 1400 · ARS 1000 Viscose Silk Box.', 'image_url' => get_stylesheet_directory_uri() . '/assets/materials/wool.jpg' ),
+	array( 'title' => 'Additional ARS Systems', 'description' => 'ARS 600 Box · ARS 700 Viscose Silk Box.', 'image_url' => get_stylesheet_directory_uri() . '/assets/materials/silk.jpg' ),
 );
 $contact_email = $s['contact_emails'][0] ?? '';
 

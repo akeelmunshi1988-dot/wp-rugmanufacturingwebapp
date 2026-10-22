@@ -19,7 +19,7 @@ get_header();
 $is_logged_in = is_user_logged_in();
 ?>
 
-<div class="max-w-3xl mx-auto px-4" x-data="myOrdersList({ restUrl: '<?php echo esc_js( rest_url( 'dreamrugs/v1' ) ); ?>', loggedIn: <?php echo $is_logged_in ? 'true' : 'false'; ?>, loginUrl: '<?php echo esc_js( wp_login_url( home_url( '/my-orders' ) ) ); ?>' })">
+<div class="max-w-3xl mx-auto px-4" x-data="myOrdersList({ restUrl: '<?php echo esc_js( rest_url( 'dreamrugs/v1' ) ); ?>', loggedIn: <?php echo $is_logged_in ? 'true' : 'false'; ?>, loginUrl: '<?php echo esc_js( dreamrugs_login_url( home_url( '/my-orders/' ) ) ); ?>' })">
 
 	<?php if ( $is_logged_in ) : ?>
 
@@ -104,7 +104,7 @@ $is_logged_in = is_user_logged_in();
 			<h1 class="storefront-heading text-4xl">My Orders</h1>
 			<p class="text-stone-400 text-sm mt-1">
 				Enter your email to track orders, or
-				<a href="<?php echo esc_url( wp_login_url( home_url( '/my-orders' ) ) ); ?>" class="text-stone-900 underline underline-offset-2 hover:no-underline">sign in</a>
+				<a href="<?php echo esc_url( dreamrugs_login_url( home_url( '/my-orders/' ) ) ); ?>" class="text-stone-900 underline underline-offset-2 hover:no-underline">sign in</a>
 				for invoice access and order management.
 			</p>
 		</div>
@@ -122,7 +122,7 @@ $is_logged_in = is_user_logged_in();
 			<div class="flex items-center gap-3 border border-stone-100 bg-stone-50 px-4 py-3">
 				<span class="text-stone-400 flex-shrink-0"><?php dreamrugs_icon( 'log-in', 15 ); ?></span>
 				<p class="text-stone-500 text-sm">
-					<a href="<?php echo esc_url( wp_login_url( home_url( '/my-orders' ) ) ); ?>" class="text-stone-900 underline underline-offset-2 hover:no-underline font-medium">Sign in</a>
+					<a href="<?php echo esc_url( dreamrugs_login_url( home_url( '/my-orders/' ) ) ); ?>" class="text-stone-900 underline underline-offset-2 hover:no-underline font-medium">Sign in</a>
 					to manage your orders and quotes.
 				</p>
 			</div>

@@ -43,6 +43,16 @@ class DRC_Activator {
 		if ( get_option( 'drc_pages_version' ) === DRC_DB_VERSION ) {
 			return;
 		}
+		// Only one request does this: two concurrent first requests after a
+		// deploy both created the same pages once (a duplicate
+		// /refund-cancellation-policy/). INSERT IGNORE is atomic, unlike
+		// add_option(); a lock older than a minute is from a dead request.
+		global $wpdb;
+		$lock = 'drc_pages_lock';
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value < %d", $lock, time() - MINUTE_IN_SECONDS ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		if ( ! $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %d, 'off')", $lock, time() ) ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			return;
+		}
 		$pages = array(
 			'about'             => 'About Us',
 			'custom-rug-request' => 'Request a Custom Rug',
@@ -54,9 +64,18 @@ class DRC_Activator {
 			'order-tracking'    => 'Order Tracking',
 			'refund-cancellation-policy' => 'Refund & Cancellation Policy',
 			'privacy-policy'    => 'Privacy Policy',
+			'account'           => 'Sign In',
 		);
 		foreach ( $pages as $slug => $title ) {
-			if ( get_page_by_path( $slug ) ) {
+			$existing = get_page_by_path( $slug );
+			if ( $existing ) {
+				// WordPress's installer leaves a *draft* /privacy-policy/ page
+				// behind, which made this skip it and the URL 404. Publish our
+				// pages when only a draft exists; a trashed or private page is
+				// a deliberate choice and stays as it is.
+				if ( in_array( $existing->post_status, array( 'draft', 'auto-draft', 'pending' ), true ) ) {
+					wp_update_post( array( 'ID' => $existing->ID, 'post_status' => 'publish' ) );
+				}
 				continue;
 			}
 			wp_insert_post( array(
@@ -67,6 +86,7 @@ class DRC_Activator {
 			) );
 		}
 		update_option( 'drc_pages_version', DRC_DB_VERSION );
+		$wpdb->delete( $wpdb->options, array( 'option_name' => $lock ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	}
 
 	/** Runs on every load; dbDelta() is itself idempotent (diffs against
@@ -81,10 +101,18 @@ class DRC_Activator {
 			// Rewrite rules (e.g. DRC_Weave_Routes' /weaves/{slug}) are only
 			// registered in PHP memory each request — flush once per version
 			// bump so a newly-added rule takes effect without requiring an
-			// admin to visit Settings → Permalinks by hand. flush_rewrite_rules()
-			// itself re-runs the 'init' registrations first, so this always
-			// sees the rules current as of this deploy.
-			flush_rewrite_rules();
+			// admin to visit Settings → Permalinks by hand. Deferred to
+			// wp_loaded: this runs on plugins_loaded, before wp-settings.php
+			// has even created $wp_rewrite, so a direct flush_rewrite_rules()
+			// call here was a silent no-op (its is_callable() guard fails) —
+			// by wp_loaded every 'init' rewrite rule/CPT permastruct is
+			// registered and the flush sees the rules current as of this deploy.
+			// 0.8.0: /catalog/ + /catalog/{rug}/ like the original — must
+			// run before the flush below so the new bases are in the rules.
+			add_action( 'wp_loaded', array( 'DRC_Url_Compat', 'apply_catalog_permalinks' ), 5 );
+			add_action( 'wp_loaded', 'flush_rewrite_rules' );
+			// 0.7.0: give checkout a shipping option out of the box.
+			add_action( 'wp_loaded', array( 'DRC_Shipping', 'ensure_zone_method' ) );
 		}
 	}
 
@@ -212,8 +240,10 @@ class DRC_Activator {
 			transaction_type VARCHAR(50) NOT NULL,
 			notes TEXT DEFAULT NULL,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			legacy_id BIGINT UNSIGNED DEFAULT NULL,
 			PRIMARY KEY  (id),
-			KEY material_id (material_id)
+			KEY material_id (material_id),
+			UNIQUE KEY legacy_id (legacy_id)
 		) {$charset_collate};";
 
 		dbDelta( $sql_materials );

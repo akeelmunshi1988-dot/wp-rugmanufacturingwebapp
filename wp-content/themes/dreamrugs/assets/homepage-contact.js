@@ -27,7 +27,7 @@ function homepageContact(config) {
 				const res = await fetch(`${this.restUrl}/homepage-enquiry`, {
 					method: 'POST',
 					credentials: 'same-origin',
-					headers: drcHomepageContactHeaders({ 'Content-Type': 'application/json' }),
+					headers: drcHomepageContactHeaders(Object.assign({ 'Content-Type': 'application/json' }, window.drcBot ? window.drcBot.headers(this.$root.querySelector('form')) : {})),
 					body: JSON.stringify(this.form),
 				});
 				const data = await res.json().catch(() => ({}));

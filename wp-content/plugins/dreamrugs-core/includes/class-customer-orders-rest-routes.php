@@ -28,10 +28,15 @@ class DRC_Customer_Orders_Rest_Routes {
 	// Refund % by order status at time of cancellation — production is
 	// already committed once in_production, so only a partial refund
 	// applies from there; anything past that is no longer cancellable
-	// through this flow. Mirrors orders.py's CANCELLATION_REFUND_POLICY
-	// exactly — one policy, ported once, not redefined per-route.
+	// through this flow. Ports orders.py's CANCELLATION_REFUND_POLICY, but
+	// keyed on WooCommerce's statuses: the original's "pending" meant paid
+	// and awaiting production, which is WooCommerce's "processing". WC's
+	// own "pending"/"on-hold" mean not yet paid — still cancellable, and
+	// cancel() only refunds when a payment transaction exists.
 	const CANCELLATION_REFUND_POLICY = array(
 		'pending'       => 1.0,
+		'on-hold'       => 1.0,
+		'processing'    => 1.0,
 		'in_production' => 0.5,
 	);
 
@@ -60,6 +65,30 @@ class DRC_Customer_Orders_Rest_Routes {
 			'methods'             => 'POST',
 			'callback'            => array( __CLASS__, 'cancel' ),
 			'permission_callback' => array( 'DRC_Rest_Routes', 'require_login' ),
+		) );
+		// GST invoice PDF for the customer — logged-in owner, or a guest
+		// holding the order key from their confirmation page/email.
+		register_rest_route( self::NS, '/orders/(?P<id>\d+)/invoice', array(
+			'methods'             => 'GET',
+			'callback'            => array( __CLASS__, 'download_invoice' ),
+			'permission_callback' => '__return_true',
+		) );
+
+		$admin = array( 'DRC_Rest_Routes', 'require_manage_woocommerce' );
+		register_rest_route( self::NS, '/admin/orders/(?P<id>\d+)/cancel', array(
+			'methods'             => 'POST',
+			'callback'            => array( __CLASS__, 'admin_cancel' ),
+			'permission_callback' => $admin,
+		) );
+		register_rest_route( self::NS, '/admin/orders/(?P<id>\d+)/invoice/email', array(
+			'methods'             => 'POST',
+			'callback'            => array( __CLASS__, 'admin_email_invoice' ),
+			'permission_callback' => $admin,
+		) );
+		register_rest_route( self::NS, '/admin/orders/combine', array(
+			'methods'             => 'POST',
+			'callback'            => array( __CLASS__, 'admin_combine' ),
+			'permission_callback' => $admin,
 		) );
 	}
 
@@ -176,6 +205,9 @@ class DRC_Customer_Orders_Rest_Routes {
 			'item_count'           => max( 1, count( $items ) ),
 			'items'                => $items,
 			'order_total'          => (float) $order->get_total(),
+			// GST invoice PDF (tax once paid, proforma before) — the order key
+			// authorises it, so the link works for guests and account holders.
+			'invoice_url'          => $quote ? add_query_arg( 'key', $order->get_order_key(), rest_url( self::NS . '/orders/' . $order->get_id() . '/invoice' ) ) : null,
 		);
 	}
 
@@ -289,11 +321,15 @@ class DRC_Customer_Orders_Rest_Routes {
 	/** Same same-state/inter-state GST split logic as the invoice generator
 	 * and customer.py's _gst_split(): identical state codes on both sides
 	 * -> CGST+SGST split evenly, otherwise IGST at the full rate. */
-	private static function gst_split( ?string $tenant_state, ?string $customer_state, ?float $gst_pct ): array {
-		if ( ! $gst_pct ) {
+	private static function gst_split( ?string $tenant_state, ?string $customer_state, ?float $gst_pct, ?string $country = null ): array {
+		if ( ! $gst_pct || ! DRC_Quote_Context::is_india( $country ) ) {
 			return array( 'type' => null );
 		}
-		if ( $tenant_state && $customer_state && strtoupper( $tenant_state ) === strtoupper( $customer_state ) ) {
+		// Settings hold the 2-digit GST code ("09"); WooCommerce billing
+		// state is its own code ("UP") — compare them in one form.
+		$tenant_state   = DRC_Quote_Context::gst_state_code( $tenant_state );
+		$customer_state = DRC_Quote_Context::gst_state_code( $customer_state );
+		if ( $tenant_state && $customer_state && $tenant_state === $customer_state ) {
 			$half = round( $gst_pct / 2, 2 );
 			return array( 'type' => 'cgst_sgst', 'cgst_pct' => $half, 'sgst_pct' => $half );
 		}
@@ -365,7 +401,7 @@ class DRC_Customer_Orders_Rest_Routes {
 				'material_name'      => $material_name,
 				'rug_name'           => $rug_name,
 				'weave_type'         => $weave_type,
-				'gst_split'          => self::gst_split( $settings['state_code'] ?: null, $order->get_billing_state() ?: null, $result['gst_pct'] ?? null ),
+				'gst_split'          => self::gst_split( $settings['state_code'] ?: null, $order->get_billing_state() ?: null, $result['gst_pct'] ?? null, $order->get_billing_country() ),
 			)
 		), 200 );
 	}
@@ -399,6 +435,11 @@ class DRC_Customer_Orders_Rest_Routes {
 			}
 		}
 		return new WP_REST_Response( $timeline, 200 );
+	}
+
+	/** Public view of the policy for the admin order screen. */
+	public static function policy_terms( WC_Order $order ): array {
+		return self::cancellation_terms( $order );
 	}
 
 	private static function cancellation_terms( WC_Order $order ): array {
@@ -452,6 +493,21 @@ class DRC_Customer_Orders_Rest_Routes {
 		if ( ! $order ) {
 			return new WP_Error( 'drc_not_found', 'Order not found.', array( 'status' => 404 ) );
 		}
+		return self::do_cancel( $order, 'Cancelled by customer via My Orders.' );
+	}
+
+	/** Staff cancellation — same policy and refund as the customer path
+	 * (orders.py cancel_order shares _cancel_order_and_refund the same way). */
+	public static function admin_cancel( WP_REST_Request $request ) {
+		$order = wc_get_order( (int) $request->get_param( 'id' ) );
+		if ( ! $order ) {
+			return new WP_Error( 'drc_not_found', 'Order not found.', array( 'status' => 404 ) );
+		}
+		$user = wp_get_current_user();
+		return self::do_cancel( $order, sprintf( 'Cancelled by %s with policy refund.', $user->display_name ) );
+	}
+
+	private static function do_cancel( WC_Order $order, string $note ) {
 		$terms = self::cancellation_terms( $order );
 		if ( ! $terms['eligible'] ) {
 			return new WP_Error( 'drc_not_eligible', $terms['reason'], array( 'status' => 400 ) );
@@ -476,7 +532,7 @@ class DRC_Customer_Orders_Rest_Routes {
 			}
 		}
 
-		$order->update_status( 'cancelled', 'Cancelled by customer via My Orders.' );
+		$order->update_status( 'cancelled', $note );
 
 		return new WP_REST_Response( array(
 			'order_id'       => $order->get_id(),
@@ -485,5 +541,48 @@ class DRC_Customer_Orders_Rest_Routes {
 			'refund_status'  => $refund_status,
 			'price_currency' => $order->get_currency(),
 		), 200 );
+	}
+
+	public static function download_invoice( WP_REST_Request $request ) {
+		$order = wc_get_order( (int) $request->get_param( 'id' ) );
+		$key   = (string) $request->get_param( 'key' );
+		$owned = $order && ( ( is_user_logged_in() && self::find_owned_order_strict( $order->get_id() ) ) || ( '' !== $key && hash_equals( $order->get_order_key(), $key ) ) );
+		if ( ! $owned ) {
+			return new WP_Error( 'drc_not_found', 'Order not found.', array( 'status' => 404 ) );
+		}
+		// A tax/export invoice only once the order is paid; before that the
+		// customer gets the proforma, same as the original's quote PDFs.
+		$type   = $order->is_paid() || in_array( self::bare_status( $order ), array( 'in_production', 'quality_check', 'shipped', 'delivered' ), true ) ? 'tax' : 'proforma';
+		$result = DRC_Invoice_PDF::for_order( $order, $type );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		DRC_Invoice_PDF::stream( $result );
+	}
+
+	public static function admin_email_invoice( WP_REST_Request $request ) {
+		$order = wc_get_order( (int) $request->get_param( 'id' ) );
+		if ( ! $order ) {
+			return new WP_Error( 'drc_not_found', 'Order not found.', array( 'status' => 404 ) );
+		}
+		$result = DRC_Invoice_PDF::for_order( $order, sanitize_key( $request->get_param( 'type' ) ?: 'tax' ) );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		$quote = DRC_Quote_Context::quote_row( (int) $order->get_meta( '_drc_quote_id' ) ) ?: array();
+		$to    = $request->get_param( 'recipient_email' ) ?: $order->get_billing_email();
+		$sent  = DRC_Invoice_PDF::email( $result, $quote, $to, $order );
+		if ( is_wp_error( $sent ) ) {
+			return $sent;
+		}
+		return new WP_REST_Response( array( 'message' => "Email sent to {$to}", 'recipient' => $to ), 200 );
+	}
+
+	public static function admin_combine( WP_REST_Request $request ) {
+		$result = DRC_Order_Hooks::combine( array_map( 'absint', (array) $request->get_param( 'order_ids' ) ) );
+		if ( is_wp_error( $result ) ) {
+			return new WP_Error( $result->get_error_code(), $result->get_error_message(), array( 'status' => 400 ) );
+		}
+		return new WP_REST_Response( array( 'order_id' => $result->get_id(), 'total' => (float) $result->get_total() ), 200 );
 	}
 }

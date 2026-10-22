@@ -73,7 +73,8 @@ get_header();
 					<?php foreach ( $left_step_images as $index => $step ) : $step_tile( $step, $index ); endforeach; ?>
 				</aside>
 
-				<form @submit.prevent="submit()" class="min-w-0 space-y-6">
+				<form @submit.prevent="submit()" class="min-w-0 space-y-6" data-drc-bot-form>
+					<?php dreamrugs_bot_fields(); ?>
 
 					<template x-if="!loggedIn">
 						<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">

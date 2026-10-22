@@ -35,6 +35,10 @@ $intro_video_ids = array_column( $intro_videos, 'id' );
 $grid_videos     = array_values( array_filter( $showcase_videos, fn( $v ) => ! in_array( $v['id'], $intro_video_ids, true ) ) );
 // Groups grid_videos into named tabs (defaulting to "Craftsmanship") —
 // mirrors CustomerHome.tsx's videoTabNames/visibleGridVideos.
+foreach ( $grid_videos as &$drc_v ) {
+	$drc_v['tab_name'] = $drc_v['tab_name'] ?: 'Craftsmanship';
+}
+unset( $drc_v );
 $video_tab_names = array_values( array_unique( array_column( $grid_videos, 'tab_name' ) ) );
 
 $workshop_photos = DRC_Content_Types::get_workshop_photos();
@@ -109,13 +113,42 @@ $material_textures = array(
 	array( 'id' => 'synthetic', 'label' => 'Synthetic', 'desc' => 'Stain-proof, outdoor, budget-friendly', 'image' => 'materials/synthetic.jpg' ),
 );
 $mood_tags = array(
-	array( 'v' => 'warm_earthy', 'label' => 'Warm & Earthy' ),
-	array( 'v' => 'quiet_luxury', 'label' => 'Quiet Luxury' ),
-	array( 'v' => 'modern_minimal', 'label' => 'Modern Minimal' ),
-	array( 'v' => 'bohemian', 'label' => 'Bohemian' ),
-	array( 'v' => 'bold_artistic', 'label' => 'Bold & Artistic' ),
-	array( 'v' => 'timeless_traditional', 'label' => 'Timeless Traditional' ),
+	array( 'v' => 'warm_earthy', 'label' => 'Warm & Earthy', 'image' => 'moods/warm-earthy.jpg' ),
+	array( 'v' => 'quiet_luxury', 'label' => 'Quiet Luxury', 'image' => 'moods/quiet-luxury.jpg' ),
+	array( 'v' => 'modern_minimal', 'label' => 'Modern Minimal', 'image' => 'moods/modern-minimal.jpg' ),
+	array( 'v' => 'bohemian', 'label' => 'Bohemian', 'image' => 'moods/bohemian.jpg' ),
+	array( 'v' => 'bold_artistic', 'label' => 'Bold & Artistic', 'image' => 'moods/bold-artistic.jpg' ),
+	array( 'v' => 'timeless_traditional', 'label' => 'Timeless Traditional', 'image' => 'moods/timeless-traditional.jpg' ),
 );
+// Homepage SEO + WebSite / HomeAndConstructionBusiness JSON-LD (CustomerHome.tsx).
+$drc_home_settings = dreamrugs_settings();
+$drc_logo_id       = get_theme_mod( 'custom_logo' );
+$drc_org           = array_filter( array(
+	'@context'     => 'https://schema.org',
+	'@type'        => 'HomeAndConstructionBusiness',
+	'name'         => get_bloginfo( 'name' ),
+	'url'          => home_url( '/' ),
+	'image'        => $drc_home_settings['hero_images'][0]['image_url'] ?? ( $drc_home_settings['hero_image_url'] ?: null ),
+	'logo'         => $drc_logo_id ? wp_get_attachment_image_url( $drc_logo_id, 'full' ) : null,
+	'contactPoint' => ( ! empty( $drc_home_settings['contact_emails'][0] ) || ! empty( $drc_home_settings['contact_phones'][0] ) ) ? array_filter( array(
+		'@type'       => 'ContactPoint',
+		'contactType' => 'customer service',
+		'email'       => $drc_home_settings['contact_emails'][0] ?? null,
+		'telephone'   => $drc_home_settings['contact_phones'][0] ?? null,
+	) ) : null,
+	'address'      => ! empty( $drc_home_settings['contact_address'] ) ? array( '@type' => 'PostalAddress', 'streetAddress' => $drc_home_settings['contact_address'], 'addressCountry' => 'IN' ) : null,
+	'sameAs'       => array_values( (array) ( $drc_home_settings['social_links'] ?? array() ) ) ?: null,
+) );
+dreamrugs_seo( array(
+	'title'       => 'Handmade Rugs & Carpets from India',
+	'description' => 'Hand-knotted and hand-tufted wool and silk rugs, woven in Bhadohi, India and made to your exact size and design. Custom carpets, shipped worldwide.',
+	'canonical'   => home_url( '/' ),
+	'jsonld'      => array(
+		array( '@context' => 'https://schema.org', '@type' => 'WebSite', 'name' => get_bloginfo( 'name' ), 'url' => home_url( '/' ) ),
+		$drc_org,
+	),
+) );
+$gallery_titles = array_values( array_filter( (array) ( dreamrugs_settings()['homepage_gallery_titles'] ?? array() ) ) ) ?: require get_theme_file_path( 'data/gallery-titles.php' );
 
 get_header();
 ?>
@@ -177,7 +210,7 @@ get_header();
 
 <div class="border-b border-stone-100">
 	<div class="w-[94vw] max-w-none mx-auto px-4 py-6 flex flex-wrap gap-10 justify-center sm:justify-start">
-		<?php foreach ( array( array( ( (int) $catalog_total ?: 8 ) . '+', 'Designs' ), array( (string) ( $materials_count ?: 4 ), 'Materials' ), array( '7–60', 'Day Delivery' ) ) as $s ) : ?>
+		<?php foreach ( array( array( ( (int) $catalog_total ?: 8 ) . '+', 'Designs' ), array( (string) ( $materials_count ?: 4 ), 'Materials' ), array( '4–15', 'Weeks Delivery' ) ) as $s ) : ?>
 			<div>
 				<p class="font-serif text-2xl text-stone-900 font-light"><?php echo esc_html( $s[0] ); ?></p>
 				<p class="text-stone-400 text-xs uppercase tracking-wider mt-0.5"><?php echo esc_html( $s[1] ); ?></p>
@@ -339,7 +372,7 @@ $drc_value_icon_map = array( 'package' => 'package-check', 'shield' => 'shield-c
 		<div class="mb-12">
 			<p class="text-xs tracking-[0.2em] uppercase text-stone-400 mb-2">See It Made</p>
 			<h2 class="font-serif text-4xl font-light text-stone-900">Behind the Craft</h2>
-			<?php if ( count( $video_tab_names ) > 1 ) : ?>
+			<?php if ( count( $video_tab_names ) > 0 ) : ?>
 				<div class="flex flex-wrap gap-x-7 gap-y-3 mt-8 border-b border-stone-200" role="tablist" aria-label="Craft video categories">
 					<?php foreach ( $video_tab_names as $name ) : ?>
 						<button type="button" role="tab" @click="tab = '<?php echo esc_js( $name ); ?>'" :aria-selected="tab === '<?php echo esc_js( $name ); ?>'"
@@ -352,11 +385,16 @@ $drc_value_icon_map = array( 'package' => 'package-check', 'shield' => 'shield-c
 			<?php endif; ?>
 		</div>
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-			<?php foreach ( $grid_videos as $index => $v ) :
-				$column_position = $index % 4;
+			<?php
+			// Column position counts within the video's own tab, so a card
+			// expands the right way whichever tab is showing.
+			$drc_tab_positions = array();
+			foreach ( $grid_videos as $index => $v ) :
+				$tab_index = $drc_tab_positions[ $v['tab_name'] ] = ( $drc_tab_positions[ $v['tab_name'] ] ?? -1 ) + 1;
+				$column_position = $tab_index % 4;
 				$expansion_position = 0 === $column_position ? 'lg:left-0 lg:origin-left' : ( 3 === $column_position ? 'lg:right-0 lg:origin-right' : 'lg:left-1/2 lg:-translate-x-1/2 lg:origin-center' );
 			?>
-				<div x-show="tab === '<?php echo esc_js( $v['tab_name'] ); ?>'" <?php echo $index > 0 ? 'x-cloak' : ''; ?>
+				<div x-show="tab === '<?php echo esc_js( $v['tab_name'] ); ?>'" <?php echo $v['tab_name'] !== $video_tab_names[0] ? 'x-cloak' : ''; ?>
 					class="group relative aspect-[3/4] cursor-pointer hover:z-30 focus-within:z-30" x-data="{ playing: false }"
 					@mouseenter="playing = true; $refs.vid.play().catch(()=>{})"
 					@mouseleave="playing = false; $refs.vid.pause(); $refs.vid.currentTime = 0"
@@ -483,7 +521,7 @@ $drc_value_icon_map = array( 'package' => 'package-check', 'shield' => 'shield-c
 
 		<div x-show="tab === 'space'" class="grid grid-cols-2 lg:grid-cols-4 gap-4">
 			<?php foreach ( $room_types as $s ) : ?>
-				<a href="<?php echo esc_url( home_url( '/catalog/space/' . $s['v'] ) ); ?>" class="group relative overflow-hidden bg-cream-200 aspect-square flex items-center justify-center text-center p-6">
+				<a href="<?php echo esc_url( home_url( '/collections/space/' . $s['v'] . '/' ) ); ?>" class="group relative overflow-hidden bg-cream-200 aspect-square flex items-center justify-center text-center p-6">
 					<img src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/' . $s['image'] ); ?>" alt="" loading="lazy" class="absolute inset-0 w-full h-full object-cover scale-100 group-hover:scale-105 transition-transform duration-500" />
 					<div class="absolute inset-0 bg-stone-900/35 group-hover:bg-stone-900/45 transition-colors duration-500"></div>
 					<span class="relative font-serif text-xl font-light text-white"><?php echo esc_html( $s['label'] ); ?></span>
@@ -491,15 +529,19 @@ $drc_value_icon_map = array( 'package' => 'package-check', 'shield' => 'shield-c
 			<?php endforeach; ?>
 		</div>
 
-		<div x-show="tab === 'mood'" x-cloak class="flex flex-wrap items-center justify-center gap-3">
+		<div x-show="tab === 'mood'" x-cloak class="grid grid-cols-2 lg:grid-cols-3 gap-4">
 			<?php foreach ( $mood_tags as $m ) : ?>
-				<a href="<?php echo esc_url( home_url( '/catalog/mood/' . $m['v'] ) ); ?>" class="storefront-cta-outline bg-white px-5 py-2.5"><?php echo esc_html( $m['label'] ); ?></a>
+				<a href="<?php echo esc_url( home_url( '/collections/mood/' . $m['v'] . '/' ) ); ?>" class="group relative overflow-hidden bg-cream-200 aspect-[4/3] flex items-center justify-center text-center p-4 sm:p-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-stone-900">
+					<img src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/' . $m['image'] ); ?>" alt="<?php echo esc_attr( $m['label'] . ' rug style' ); ?>" loading="lazy" width="900" height="675" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 motion-safe:group-hover:scale-105" />
+					<div class="absolute inset-0 bg-stone-900/30 group-hover:bg-stone-900/40 transition-colors duration-500"></div>
+					<span class="relative font-serif text-xl sm:text-2xl font-light text-white"><?php echo esc_html( $m['label'] ); ?></span>
+				</a>
 			<?php endforeach; ?>
 		</div>
 
 		<div x-show="tab === 'material'" x-cloak class="grid grid-cols-2 lg:grid-cols-4 gap-4">
 			<?php foreach ( $material_textures as $mat ) : ?>
-				<a href="<?php echo esc_url( home_url( '/catalog/material/' . $mat['id'] ) ); ?>" class="group relative overflow-hidden bg-cream-200 aspect-square flex items-center justify-center text-center p-6">
+				<a href="<?php echo esc_url( home_url( '/collections/material/' . $mat['id'] . '/' ) ); ?>" class="group relative overflow-hidden bg-cream-200 aspect-square flex items-center justify-center text-center p-6">
 					<img src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/' . $mat['image'] ); ?>" alt="" loading="lazy" class="absolute inset-0 w-full h-full object-cover scale-100 group-hover:scale-105 transition-transform duration-500" />
 					<div class="absolute inset-0 bg-stone-900/35 group-hover:bg-stone-900/45 transition-colors duration-500"></div>
 					<div class="relative space-y-2">
@@ -513,19 +555,38 @@ $drc_value_icon_map = array( 'package' => 'package-check', 'shield' => 'shield-c
 </section>
 
 <?php if ( ! empty( $trending ) ) : ?>
-<section class="w-[94vw] max-w-none mx-auto px-4 py-20">
-	<h2 class="storefront-heading text-4xl text-center mb-12">Latest Trending Rug Designs</h2>
-	<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-10">
-		<?php foreach ( $trending as $rug ) :
+<section class="bg-[#f3f1e8] py-20 md:py-28">
+	<div class="mx-auto w-[90vw]">
+	<header class="mb-16 md:mb-20">
+		<p class="mb-8 text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Trending Now</p>
+		<div class="grid gap-10 md:grid-cols-12 md:items-end">
+			<h2 class="font-condensed text-[clamp(3rem,5.1vw,6.2rem)] font-medium uppercase leading-[0.98] tracking-[-0.035em] text-[#191d27] md:col-span-10">
+				Latest trending.
+				<span class="text-[#9b9a93]">Rug designs our clients love.</span>
+			</h2>
+			<div class="md:col-span-6 md:col-start-7">
+				<p class="text-base leading-relaxed text-stone-500 md:text-lg">
+					Hand-picked from our newest collection — every design made to order in your size, colours and materials.
+				</p>
+				<a href="<?php echo esc_url( get_permalink( wc_get_page_id( 'shop' ) ) ); ?>"
+					class="mt-8 inline-flex items-center justify-center bg-[#191d27] px-10 py-4 font-condensed text-lg font-medium uppercase tracking-[0.04em] text-white transition-colors hover:bg-rug-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#191d27]">
+					View All Rugs
+				</a>
+			</div>
+		</div>
+	</header>
+	<?php // Staggered row: every other card drops down on desktop, like an editorial gallery. ?>
+	<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-10 lg:gap-x-8">
+		<?php foreach ( array_values( $trending ) as $index => $rug ) :
 			$gallery_ids = $rug->get_gallery_image_ids();
 			$hover_url   = ! empty( $gallery_ids ) ? wp_get_attachment_image_url( $gallery_ids[0], 'large' ) : null;
 			$image_url   = wp_get_attachment_image_url( $rug->get_image_id(), 'large' );
 		?>
-			<a href="<?php echo esc_url( $rug->get_permalink() ); ?>" class="group block">
+			<a href="<?php echo esc_url( $rug->get_permalink() ); ?>" class="group block <?php echo 1 === $index % 2 ? 'lg:mt-14' : ''; ?>">
 				<div class="relative overflow-hidden bg-transparent aspect-[3/4.5]">
 					<?php if ( $image_url ) : ?>
 						<img src="<?php echo esc_url( $image_url ); ?>" alt="<?php echo esc_attr( $rug->get_name() ); ?>" loading="lazy"
-							class="w-full h-full object-contain transition-opacity duration-500 <?php echo $hover_url ? 'group-hover:opacity-0' : ''; ?>" />
+							class="w-full h-full object-contain transition-[opacity,transform] duration-700 motion-safe:group-hover:scale-[1.03] <?php echo $hover_url ? 'group-hover:opacity-0' : ''; ?>" />
 						<?php if ( $hover_url ) : ?>
 							<img src="<?php echo esc_url( $hover_url ); ?>" alt="" aria-hidden="true" loading="lazy" class="absolute inset-0 w-full h-full object-contain opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 						<?php endif; ?>
@@ -538,6 +599,7 @@ $drc_value_icon_map = array( 'package' => 'package-check', 'shield' => 'shield-c
 				</div>
 			</a>
 		<?php endforeach; ?>
+	</div>
 	</div>
 </section>
 <?php endif; ?>
@@ -598,11 +660,17 @@ $drc_value_icon_map = array( 'package' => 'package-check', 'shield' => 'shield-c
 	);
 	$gallery_groups = array_chunk( $gallery_items, count( $gallery_mosaic_layouts ) );
 	?>
-<section class="relative overflow-hidden bg-[#0b1217] py-24 md:py-32" style="background-image:radial-gradient(circle at 18% 22%, rgba(255,255,255,.035), transparent 25%), linear-gradient(115deg, transparent 35%, rgba(255,255,255,.025) 35.1%, transparent 35.3%);">
+<section class="relative overflow-hidden bg-[#0b1217] pt-24 pb-12 md:pt-32 md:pb-16" style="background-image:radial-gradient(circle at 18% 22%, rgba(255,255,255,.035), transparent 25%), linear-gradient(115deg, transparent 35%, rgba(255,255,255,.025) 35.1%, transparent 35.3%);">
 	<div class="w-[94vw] max-w-none mx-auto px-4 mb-16 md:mb-24">
 		<p class="text-xs tracking-[0.3em] uppercase text-rug-400 mb-4">Project Gallery</p>
-		<h2 class="font-black uppercase text-[#c53d16] leading-[0.82] tracking-[-0.045em] text-[13vw] xl:text-[9.5vw] 2xl:text-[148px]" style="font-family:'Arial Narrow','Roboto Condensed',Impact,sans-serif;font-stretch:condensed;">
-			Rugs in Their<br />New Homes
+		<?php // RotatingHeading.tsx: each title fades out, then the next fades in (2s hold, 1.2s fades); reduced-motion visitors see the first. ?>
+		<h2 class="grid font-black uppercase text-[#c53d16] leading-[0.82] tracking-[-0.045em] text-[13vw] xl:text-[9.5vw] 2xl:text-[148px]" style="font-family:'Arial Narrow','Roboto Condensed',Impact,sans-serif;font-stretch:condensed;"
+			x-data="{ i: 0, shown: true, n: <?php echo count( $gallery_titles ); ?> }"
+			x-init="if (n > 1 && !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) { const out = () => { shown = false; setTimeout(inn, 1200); }; const inn = () => { i = (i + 1) % n; shown = true; setTimeout(out, 3200); }; setTimeout(out, 2000); }">
+			<?php foreach ( $gallery_titles as $ti => $title ) : ?>
+				<?php // Opacity is an inline style, not a class: Alpine keeps static classes, so a static opacity-100 left the first title permanently visible under the others. ?>
+				<span class="[grid-area:1/1] ease-in-out motion-reduce:transition-none" style="transition:opacity 1200ms;opacity:<?php echo 0 === $ti ? '1' : '0'; ?>" :style="{ opacity: i === <?php echo (int) $ti; ?> && shown ? 1 : 0, pointerEvents: i === <?php echo (int) $ti; ?> && shown ? 'auto' : 'none' }" aria-hidden="<?php echo 0 === $ti ? 'false' : 'true'; ?>" :aria-hidden="i !== <?php echo (int) $ti; ?>"><?php echo esc_html( $title ); ?></span>
+			<?php endforeach; ?>
 		</h2>
 		<a href="<?php echo esc_url( home_url( '/project-gallery' ) ); ?>" class="inline-flex items-center gap-2 mt-8 text-xs font-medium tracking-[0.15em] uppercase text-cream-100 hover:text-rug-400 transition-colors pb-1 border-b border-cream-100/30 hover:border-rug-400">
 			View Full Gallery <?php dreamrugs_icon( 'arrow-right', 14 ); ?>
@@ -611,7 +679,7 @@ $drc_value_icon_map = array( 'package' => 'package-check', 'shield' => 'shield-c
 
 	<div class="w-[94vw] max-w-none mx-auto px-2 md:px-4">
 		<?php foreach ( $gallery_groups as $group ) : ?>
-			<div class="grid grid-cols-2 gap-4 mb-4 md:mb-16 md:grid-cols-12 md:grid-rows-[repeat(10,minmax(0,92px))] lg:grid-rows-[repeat(10,minmax(0,110px))] md:gap-0">
+			<div class="grid grid-cols-2 gap-4 mb-4 md:mb-16 last:mb-0 md:grid-cols-12 md:auto-rows-[92px] lg:auto-rows-[110px] md:gap-0">
 				<?php foreach ( $group as $i => $g ) :
 					$layout = $gallery_mosaic_layouts[ $i ];
 					$href   = $g['link_url'] ?: home_url( '/project-gallery/' . $g['id'] );
@@ -654,7 +722,8 @@ $drc_value_icon_map = array( 'package' => 'package-check', 'shield' => 'shield-c
 				</div>
 			</template>
 			<template x-if="!submitted">
-				<form @submit.prevent="submit()" class="mt-10 space-y-5">
+				<form @submit.prevent="submit()" class="mt-10 space-y-5" data-drc-bot-form>
+					<?php dreamrugs_bot_fields(); ?>
 					<input required maxlength="150" x-model="form.name" placeholder="Name" autocomplete="name" class="h-[68px] w-full border border-[#ded9c9] bg-transparent px-5 text-base text-stone-900 outline-none placeholder:text-[#aea789] focus:border-rug-600" />
 					<input required type="email" maxlength="200" x-model="form.email" placeholder="Email" autocomplete="email" class="h-[68px] w-full border border-[#ded9c9] bg-transparent px-5 text-base text-stone-900 outline-none placeholder:text-[#aea789] focus:border-rug-600" />
 					<input required maxlength="250" x-model="form.subject" placeholder="Subject" class="h-[68px] w-full border border-[#ded9c9] bg-transparent px-5 text-base text-stone-900 outline-none placeholder:text-[#aea789] focus:border-rug-600" />

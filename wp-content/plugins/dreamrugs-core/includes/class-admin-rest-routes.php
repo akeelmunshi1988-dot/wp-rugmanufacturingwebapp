@@ -309,6 +309,11 @@ class DRC_Admin_Rest_Routes {
 		}
 		$row['rush_order']         = (bool) $q['rush_order'];
 		$row['is_custom_request']  = (bool) $q['is_custom_request'];
+		$row['size_display']   = DRC_Quote_Context::size_display( $q );
+		$row['customer_phone'] = DRC_Quote_Context::customer( $q )['phone'];
+		if ( ! $row['customer_phone'] && $q['notes'] && preg_match( '/Phone:\s*([+\d][\d\s\-()]{6,})/', $q['notes'], $m ) ) {
+			$row['customer_phone'] = trim( $m[1] ); // guest phone kept in notes
+		}
 		$row['reference_image_urls']     = $q['reference_image_urls'] ? json_decode( $q['reference_image_urls'], true ) : null;
 		$row['vendor_sample_image_urls'] = $q['vendor_sample_image_urls'] ? json_decode( $q['vendor_sample_image_urls'], true ) : null;
 		return $row;
@@ -339,7 +344,15 @@ class DRC_Admin_Rest_Routes {
 		}
 		if ( $search ) {
 			$like = '%' . $wpdb->esc_like( $search ) . '%';
-			$conditions = array( $wpdb->prepare( '(guest_name LIKE %s OR guest_email LIKE %s)', $like, $like ) );
+			$conditions = array( $wpdb->prepare( '(guest_name LIKE %s OR guest_email LIKE %s OR notes LIKE %s)', $like, $like, $like ) );
+			$user_ids = get_users( array( 'search' => '*' . $search . '*', 'search_columns' => array( 'user_email', 'display_name', 'user_login' ), 'fields' => 'ID', 'number' => 200 ) );
+			if ( $user_ids ) {
+				$conditions[] = 'customer_user_id IN (' . implode( ',', array_map( 'intval', $user_ids ) ) . ')';
+			}
+			$product_ids = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = 'product' AND post_title LIKE %s LIMIT 200", $like ) );
+			if ( $product_ids ) {
+				$conditions[] = 'product_id IN (' . implode( ',', array_map( 'intval', $product_ids ) ) . ')';
+			}
 			if ( ctype_digit( trim( $search ) ) ) {
 				$conditions[] = $wpdb->prepare( 'id = %d', (int) trim( $search ) );
 			}
@@ -398,21 +411,6 @@ class DRC_Admin_Rest_Routes {
 		return new WP_REST_Response( self::format_quote_for_admin( $quote ), 200 );
 	}
 
-	/** Fire-and-forget customer notification — a plain, functional email
-	 * rather than a port of the original's full templated email system
-	 * (backend/app/services/email_templates.py, a separate large area of
-	 * its own). Never blocks or fails the request if mail sending fails. */
-	private static function notify_customer( array $quote, string $subject, string $body ) {
-		$email = $quote['guest_email'];
-		if ( $quote['customer_user_id'] ) {
-			$user  = get_userdata( $quote['customer_user_id'] );
-			$email = $user ? $user->user_email : $email;
-		}
-		if ( $email && is_email( $email ) ) {
-			wp_mail( $email, $subject, $body );
-		}
-	}
-
 	public static function send_quote( WP_REST_Request $request ) {
 		global $wpdb;
 		$table = $wpdb->prefix . 'drc_quotes';
@@ -430,7 +428,7 @@ class DRC_Admin_Rest_Routes {
 		}
 		$wpdb->update( $table, $update, array( 'id' => $quote['id'] ) );
 		$updated = self::find_quote_or_404( $quote['id'] );
-		self::notify_customer( $updated, 'Your DreamRugsCreation quote is ready', "Your quote #{$updated['id']} is ready for review at " . home_url( '/my-quotes/' ) );
+		DRC_Quote_Context::notify_customer_quote_sent( $updated );
 		return new WP_REST_Response( self::format_quote_for_admin( $updated ), 200 );
 	}
 
@@ -470,17 +468,7 @@ class DRC_Admin_Rest_Routes {
 		$updated = self::find_quote_or_404( $quote['id'] );
 
 		$pay_url = $order->get_checkout_payment_url();
-		self::notify_customer(
-			$updated,
-			'Your DreamRugsCreation order is ready for payment',
-			sprintf(
-				"Good news — your order #%d (from quote #%d) has been confirmed and is awaiting payment.\n\nTotal due: %s\n\nComplete your payment here:\n%s",
-				$order->get_id(),
-				$updated['id'],
-				wp_strip_all_tags( wc_price( $order->get_total(), array( 'currency' => $order->get_currency() ) ) ),
-				$pay_url
-			)
-		);
+		DRC_Quote_Context::notify_customer_payment_link( $updated, $order );
 
 		$response              = self::format_quote_for_admin( $updated );
 		$response['order_id']  = $order->get_id();
@@ -505,7 +493,7 @@ class DRC_Admin_Rest_Routes {
 		}
 		$wpdb->update( $table, $update, array( 'id' => $quote['id'] ) );
 		$updated = self::find_quote_or_404( $quote['id'] );
-		self::notify_customer( $updated, 'Update on your DreamRugsCreation quote', "Quote #{$updated['id']} could not be fulfilled." . ( $reason ? " Reason: {$reason}" : '' ) );
+		DRC_Quote_Context::notify_customer_quote_rejected( $updated, $reason );
 		return new WP_REST_Response( self::format_quote_for_admin( $updated ), 200 );
 	}
 
@@ -630,7 +618,12 @@ class DRC_Admin_Rest_Routes {
 			$result = $engine->calculate_custom_quote(
 				$quote,
 				(int) $material_id,
-				null !== $request->get_param( 'margin_pct' ) ? (float) $request->get_param( 'margin_pct' ) : null
+				null !== $request->get_param( 'margin_pct' ) ? (float) $request->get_param( 'margin_pct' ) : null,
+				isset( $update['custom_size_w'] ) ? (float) $update['custom_size_w'] : null,
+				isset( $update['custom_size_h'] ) ? (float) $update['custom_size_h'] : null,
+				isset( $update['manual_discount_pct'] ) ? (float) $update['manual_discount_pct'] : null,
+				$update['rug_shape'] ?? null,
+				isset( $update['shipping_cost'] ) ? (float) $update['shipping_cost'] : null
 			);
 			if ( isset( $result['error'] ) ) {
 				return new WP_Error( 'drc_adjust_failed', $result['error'], array( 'status' => 400 ) );
@@ -641,6 +634,9 @@ class DRC_Admin_Rest_Routes {
 			$update['final_price']    = $result['final_price'];
 			$update['gst_pct']        = $result['gst_pct'];
 			$update['price_currency'] = $result['price_currency'];
+			if ( empty( $quote['expected_delivery_days'] ) && ! empty( $result['estimated_days'] ) ) {
+				$update['expected_delivery_days'] = (int) $result['estimated_days'];
+			}
 		} else {
 			$update['final_price'] = (float) $final_price;
 		}
@@ -653,7 +649,7 @@ class DRC_Admin_Rest_Routes {
 
 		$wpdb->update( $table, $update, array( 'id' => $quote['id'] ) );
 		$updated = self::find_quote_or_404( $quote['id'] );
-		self::notify_customer( $updated, 'Your DreamRugsCreation quote is ready', "Your quote #{$updated['id']} is ready for review at " . home_url( '/my-quotes/' ) );
+		DRC_Quote_Context::notify_customer_quote_sent( $updated );
 		return new WP_REST_Response( self::format_quote_for_admin( $updated ), 200 );
 	}
 
@@ -929,6 +925,8 @@ class DRC_Admin_Rest_Routes {
 		// update_settings() below only ever writes back keys from
 		// DRC_Settings::defaults(), so appending these here is harmless on
 		// save (silently ignored, same as any other unknown key would be).
+		// Never send the Turnstile secret back to the browser.
+		$settings['turnstile_secret_key'] = '' !== (string) $settings['turnstile_secret_key'] ? '__set__' : '';
 		$settings['exchange_rates_synced_at']  = get_option( 'drc_exchange_rates_synced_at' ) ?: null;
 		$settings['exchange_rates_last_error'] = get_option( 'drc_exchange_rates_last_error' ) ?: null;
 		return new WP_REST_Response( $settings, 200 );
@@ -961,6 +959,7 @@ class DRC_Admin_Rest_Routes {
 		'hero_images'                => array( 'url_keys' => array( 'image_url' ), 'text_keys' => array( 'alt_text', 'eyebrow', 'headline', 'button_text' ) ),
 		'homepage_values_items'      => array( 'url_keys' => array(), 'text_keys' => array( 'icon', 'title', 'description' ) ),
 		'product_accordion_sections' => array( 'url_keys' => array(), 'text_keys' => array( 'id', 'title' ), 'html_keys' => array( 'html' ) ),
+		'certifications'             => array( 'url_keys' => array( 'image_url' ), 'text_keys' => array( 'label' ) ),
 	);
 
 	// Settings whose value is rich HTML content (policy pages, narrative
@@ -1020,6 +1019,9 @@ class DRC_Admin_Rest_Routes {
 			if ( null === $value ) {
 				continue;
 			}
+			if ( 'turnstile_secret_key' === $key && '__set__' === $value ) {
+				continue; // unchanged — the real secret was never sent to the browser
+			}
 			if ( 'trending_product_ids' === $key && is_array( $value ) ) {
 				// Ordered list of product IDs — cast to int and drop anything
 				// that isn't a real, published product so a deleted/unpublished
@@ -1033,6 +1035,28 @@ class DRC_Admin_Rest_Routes {
 				// array settings (contact_emails/contact_phones) this same
 				// generic loop also handles.
 				$partial[ $key ] = array_map( 'floatval', $value );
+			} elseif ( 'social_links' === $key && is_array( $value ) ) {
+				$partial[ $key ] = array();
+				foreach ( array( 'instagram', 'pinterest', 'linkedin', 'facebook', 'youtube', 'x' ) as $platform ) {
+					$url = esc_url_raw( (string) ( $value[ $platform ] ?? '' ) );
+					if ( $url ) {
+						$partial[ $key ][ $platform ] = $url;
+					}
+				}
+			} elseif ( 'storefront_menu_visibility' === $key && is_array( $value ) ) {
+				// Only "hidden" entries are stored; everything else shows.
+				$partial[ $key ] = array();
+				foreach ( $value as $menu_key => $shown ) {
+					if ( ! $shown ) {
+						$partial[ $key ][ sanitize_text_field( (string) $menu_key ) ] = false;
+					}
+				}
+			} elseif ( 'homepage_gallery_titles' === $key && is_array( $value ) ) {
+				// Up to 20 titles of up to 100 characters, like the original.
+				$partial[ $key ] = array_slice( array_values( array_filter( array_map( function ( $t ) { return mb_substr( sanitize_text_field( (string) $t ), 0, 100 ); }, $value ) ) ), 0, 20 );
+			} elseif ( in_array( $key, array( 'contact_emails', 'contact_phones', 'enabled_currencies' ), true ) ) {
+				$list = is_array( $value ) ? $value : preg_split( '/[\r\n,]+/', (string) $value );
+				$partial[ $key ] = array_values( array_filter( array_map( 'sanitize_text_field', array_map( 'trim', $list ) ) ) );
 			} elseif ( 'storefront_menu_labels' === $key && is_array( $value ) ) {
 				// {nav-item-key: label} — keys are internal identifiers
 				// (header.php's own nav-item slugs), not user-facing text, so
@@ -1054,7 +1078,21 @@ class DRC_Admin_Rest_Routes {
 			} elseif ( isset( self::REPEATER_SETTINGS[ $key ] ) && is_array( $value ) ) {
 				$partial[ $key ] = self::sanitize_repeater_rows( $value, self::REPEATER_SETTINGS[ $key ] );
 			} else {
-				$partial[ $key ] = is_array( $value ) ? array_map( 'sanitize_text_field', $value ) : ( is_bool( $value ) ? $value : ( is_numeric( $value ) ? (float) $value : sanitize_text_field( $value ) ) );
+				// Keep each setting's own type: numbers stay numbers, but a
+				// text value that happens to be all digits (a "09" state
+				// code, a phone number) stays text.
+				$default = DRC_Settings::defaults()[ $key ];
+				if ( is_array( $value ) ) {
+					$partial[ $key ] = array_map( 'sanitize_text_field', $value );
+				} elseif ( is_bool( $default ) ) {
+					$partial[ $key ] = (bool) $value;
+				} elseif ( is_int( $default ) ) {
+					$partial[ $key ] = (int) $value;
+				} elseif ( is_float( $default ) ) {
+					$partial[ $key ] = (float) $value;
+				} else {
+					$partial[ $key ] = sanitize_text_field( (string) $value );
+				}
 			}
 		}
 		return new WP_REST_Response( DRC_Settings::update( $partial ), 200 );
