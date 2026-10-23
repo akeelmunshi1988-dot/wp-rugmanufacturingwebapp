@@ -49,6 +49,25 @@ app credentials it can't ship with:
 The storefront's `SocialLoginButtons` equivalent renders automatically on
 `wp-login.php` once a provider is configured.
 
+## WebP images
+
+`dreamrugs-core` (`DRC_Webp_Images`) makes WordPress save every uploaded
+JPEG/PNG — the full-size image and all resized copies the storefront shows —
+as WebP at quality 82, typically 70–90% smaller. The uploaded file is kept as
+the attachment's original image, which the Pinterest feed
+(`/pinterest-feed.xml`) links to. Needs a PHP image library with WebP support
+(GD or Imagick; the Docker image has both) — without it, uploads simply stay
+JPEG/PNG.
+
+New uploads are converted automatically. Images uploaded before this was
+enabled keep their old copies until regenerated once (safe to re-run; it
+doesn't delete originals):
+
+```sh
+docker compose run --rm wpcli media regenerate --yes   # locally
+wp media regenerate --yes                              # on the server
+```
+
 ## Structure
 
 - `wp-content/plugins/dreamrugs-core/` — the custom plugin: quote engine,

@@ -64,7 +64,7 @@ $cover_url      = wp_get_attachment_image_url( $product->get_image_id(), 'large'
 // selecting a color can swap the cover shot (and, when this rug has no
 // separate gallery, the lifestyle shot too) to that color's own photo,
 // mirroring CustomerRugDetail.tsx's coverImage/selectedColorOption logic.
-$color_options = DRC_Color_Options::get( $product_id );
+$color_options = DRC_Color_Options::for_display( $product_id );
 
 $current_user_id = get_current_user_id();
 $active_quote     = null;

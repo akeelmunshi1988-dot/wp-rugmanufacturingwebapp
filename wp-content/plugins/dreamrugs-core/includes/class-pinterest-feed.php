@@ -53,6 +53,18 @@ class DRC_Pinterest_Feed {
 		exit;
 	}
 
+	/**
+	 * The uploaded JPEG/PNG itself. Since DRC_Webp_Images, WordPress stores
+	 * the "full" size as WebP and keeps the upload as the original image;
+	 * Pinterest gets the original format.
+	 */
+	public static function original_image_url( $attachment_id ): ?string {
+		if ( ! $attachment_id ) {
+			return null;
+		}
+		return wp_get_original_image_url( (int) $attachment_id ) ?: ( wp_get_attachment_image_url( (int) $attachment_id, 'full' ) ?: null );
+	}
+
 	public static function build(): string {
 		$business = get_bloginfo( 'name' ) ?: 'DreamRugsCreation';
 		$currency = DRC_Multi_Currency::base();
@@ -63,7 +75,7 @@ class DRC_Pinterest_Feed {
 		foreach ( $products as $product ) {
 			$sizes = DRC_Product_Data::size_variations( $product );
 			$price = DRC_Product_Data::display_price( $product, $sizes );
-			$cover = wp_get_attachment_image_url( $product->get_image_id(), 'full' );
+			$cover = self::original_image_url( $product->get_image_id() );
 			if ( null === $price || ! $cover ) {
 				continue;
 			}
@@ -74,7 +86,7 @@ class DRC_Pinterest_Feed {
 			$title       = preg_match( '/\b(rug|carpet|dhurrie|runner)s?\b/i', $name ) ? $name : $name . ' Rug';
 			$description = wp_strip_all_tags( $product->get_short_description() ?: $product->get_description() );
 			$description = $description ?: sprintf( '%s: a %s rug%s, handmade in India and custom-made to your exact size.', $name, strtolower( $material ?: 'handmade' ), $weave ? ', ' . $weave : '' );
-			$extra       = array_slice( array_filter( array_map( fn( $id ) => wp_get_attachment_image_url( $id, 'full' ), $product->get_gallery_image_ids() ) ), 0, self::MAX_EXTRA_IMG );
+			$extra       = array_slice( array_filter( array_map( array( __CLASS__, 'original_image_url' ), $product->get_gallery_image_ids() ) ), 0, self::MAX_EXTRA_IMG );
 			$default     = $sizes['variations'][ $sizes['default_index'] ] ?? null;
 
 			$fields = array(

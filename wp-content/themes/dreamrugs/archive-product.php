@@ -293,7 +293,7 @@ endif; ?>
 					$gallery_ids   = $product->get_gallery_image_ids();
 					$hover_url     = ! empty( $gallery_ids ) ? wp_get_attachment_image_url( $gallery_ids[0], 'large' ) : null;
 					$image_url     = wp_get_attachment_image_url( $product->get_image_id(), 'large' );
-					$color_options = DRC_Color_Options::get( $product->get_id() );
+					$color_options = DRC_Color_Options::for_display( $product->get_id() );
 				?>
 					<?php
 					$column_position   = $loop_index % 3;

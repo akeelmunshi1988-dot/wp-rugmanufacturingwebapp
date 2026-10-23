@@ -46,6 +46,26 @@ class DRC_Color_Options {
 		}, $decoded ) ) );
 	}
 
+	/**
+	 * Storefront variant of get(): a colour photo that lives in the media
+	 * library is swapped for its "large" copy (WebP, see DRC_Webp_Images)
+	 * instead of the multi-MB original. get() itself stays untouched — the
+	 * admin meta box saves what it reads back.
+	 *
+	 * @return array<int, array{name: string, hex: string, image_url: ?string}>
+	 */
+	public static function for_display( int $product_id ): array {
+		return array_map( function ( $color ) {
+			if ( $color['image_url'] ) {
+				$attachment_id = attachment_url_to_postid( $color['image_url'] );
+				if ( $attachment_id ) {
+					$color['image_url'] = wp_get_attachment_image_url( $attachment_id, 'large' ) ?: $color['image_url'];
+				}
+			}
+			return $color;
+		}, self::get( $product_id ) );
+	}
+
 	public static function add_meta_box( $post ) {
 		if ( ! wc_get_product( $post )?->is_type( 'variable' ) ) {
 			return; // Colorways only make sense on the variable (size-picker) rugs DRC prices.

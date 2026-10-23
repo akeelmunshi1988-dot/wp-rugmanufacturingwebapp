@@ -208,7 +208,8 @@ class DRC_Design_Stories {
 	/** Full single-story data (GET /customer/stories/{slug}). */
 	public static function format_detail( \WP_Post $post ): array {
 		return array_merge( self::format_summary( $post ), array(
-			'cover_image_url' => get_the_post_thumbnail_url( $post, 'full' ) ?: null,
+			// 2048px copy (WebP, see DRC_Webp_Images) rather than the multi-MB original; falls back to the original when smaller.
+			'cover_image_url' => get_the_post_thumbnail_url( $post, '2048x2048' ) ?: null,
 			'body_html'       => self::sanitize_body_html( $post->post_content ),
 			'media'           => self::get_media( $post->ID ),
 			'rug'             => self::linked_rug( $post->ID ),
